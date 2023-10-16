@@ -186,7 +186,7 @@ public class ConvertPanel extends JFrame {
                 	showResult = fileList.get(i).toString();
                 	
                 	// 后缀为js/vue/jsx的需要处理
-                	if (showResult.lastIndexOf('.') > -1 && showResult.substring(showResult.lastIndexOf('.'), showResult.length()).indexOf(processFileType) > -1) {
+                	if (showResult.lastIndexOf('.') > -1 && processFileType.indexOf(showResult.substring(showResult.lastIndexOf('.'), showResult.length())) > -1) {
                 		processFileList.add(showResult);
                 	} else {
                 		copyFileList.add(showResult);

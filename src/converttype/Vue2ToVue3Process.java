@@ -26,6 +26,8 @@ public class Vue2ToVue3Process {
 		
 		parseResultMap = new HashMap<>();
 		
+		System.out.println(fileContent);
+		
 		String parseResultContent = "";
 		
 		// options API -> composition API
