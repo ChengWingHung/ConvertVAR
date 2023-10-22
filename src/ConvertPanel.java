@@ -22,10 +22,12 @@ import java.util.ArrayList;
 public class ConvertPanel extends JFrame {
 
 	/**
-	 * 前端框架vue和react版本升级及两大框架之间迭代转换工具
+	 * 前端框架vue和react版本升级及两大框架之间相互转换为新版本处理工具
 	 * 
-	 * @author zhengronghong
+	 * @author 郑荣鸿（chengwinghung）
 	 * @date 20231010 21:00:00
+	 * @description 前端框架转换工具
+	 * @version 1.0.0
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
@@ -302,7 +304,7 @@ public class ConvertPanel extends JFrame {
     		resultFilePath = currentFilePath;
     		resultFileName = currentFilePath.lastIndexOf('/') > -1?currentFilePath.substring(currentFilePath.lastIndexOf('/'), currentFilePath.length()):currentFilePath;
     		
-    		parseResultFileContent = Vue2ToVue3Process.parseVue2FileContent(fileContentValue);//vue2->vue3
+    		parseResultFileContent = Vue2ToVue3Process.parseVue2FileContent(resultFileName, fileContentValue);//vue2->vue3
     	}
     	
     	processFileIndex++;

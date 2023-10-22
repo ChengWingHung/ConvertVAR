@@ -88,19 +88,129 @@ public class TxtContentUtil {
 	 * @param sourceText
 	 * @return
 	 */
-	public static int getStatementEndIndex(String sourceText) {
+	public static int getStatementEndIndex(String sourceText, int startIndex) {
 		
-		int index = -1;
-		int i = 0;
+		int endIndex = -1;
 		
-		for (;i<sourceText.length();i++) {
-			if (sourceText.charAt(i) == '\r' || sourceText.charAt(i) == '\t' || sourceText.charAt(i) == '\n' || sourceText.charAt(i) == ';') {
+		for (int i = startIndex;i<sourceText.length();i++) {
+			
+			if (sourceText.charAt(i) == '\r' || sourceText.charAt(i) == '\n' || sourceText.charAt(i) == ';') {
 				if (i == 0 && sourceText.charAt(i) != ';') continue;
-				index = i;
+				endIndex = i;
 				break;
+			}
+			
+			// 正好是末尾
+			if (sourceText.length() - 1 == i) {
+				endIndex = i;
 			}
 		}
 		
-		return index == -1?i:index;
+		return endIndex;
+	}
+	
+	/**
+	 * 删除第一个为逗号的字符
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String deleteFirstComma(String sourceText, int startIndex) {
+		
+		if (',' == sourceText.substring(startIndex, sourceText.length()).trim().charAt(0)) {
+			
+			String tempText = sourceText.substring(startIndex, sourceText.length()).trim();
+			sourceText = sourceText.substring(0, startIndex) + tempText.substring(1, tempText.length());
+		}
+		
+		return sourceText;
+	}
+	
+	/**
+	 * 获取成对标签的整体内容信息
+	 * 
+	 * @param sourceText 要处理的内容
+	 * @param startInex 截取开始位置
+	 * @param startTag 起始标签
+	 * @param endTag 结束标签
+	 * @return
+	 */
+	public static String getContentByTag(String sourceText, int startInex, char startTag, char endTag) {
+		
+		int endIndex = 0;
+		
+		String tempText = sourceText.substring(startInex, sourceText.length());
+		
+		endIndex = getTagEndIndex(tempText, '{', '}') + 1;
+		
+		tempText = tempText.substring(0, endIndex);
+		
+		return tempText;
+	}
+	
+	/**
+	 * 清理整行为空的内容
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String clearBlankContentInLine(String sourceText) {
+		
+		int startIndex = -1;
+		int endIndex = -1;
+		
+		for (int i=0;i<sourceText.length();i++) {
+			
+			if (startIndex == -1 && '\n' == sourceText.charAt(i)) {
+				startIndex = i;
+			} else if (startIndex != -1 && endIndex == -1 && '\n' == sourceText.charAt(i)) {
+				endIndex = i;
+			}
+			
+			if (startIndex != -1 && endIndex != -1) {
+				
+				if ("".contentEquals(sourceText.substring(startIndex, endIndex).trim())) {
+					sourceText = sourceText.substring(0, startIndex + 1) + sourceText.substring(endIndex + 1, sourceText.length());
+					i = startIndex;
+				} else {
+					
+					startIndex = -1;
+				}
+				
+				endIndex = -1;
+				
+			}
+			
+		}
+		
+		return sourceText;
+	}
+	
+	/**
+	 * 处理内容格式
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String processFileContentFormat(String sourceText) {
+		
+		sourceText = TxtContentUtil.clearBlankContentInLine(sourceText);// 处理整行都是空白的内容
+		
+		return sourceText;
+	}
+	
+	/**
+	 * 获取语句有实际字符开始的索引
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static int getStatementStartIndex(String sourceText) {
+		
+		int startIndex = 0;
+		
+		
+		
+		return startIndex;
 	}
 }
