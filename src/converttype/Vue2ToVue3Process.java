@@ -33,6 +33,8 @@ public class Vue2ToVue3Process {
 	
 	private static Map<String, Map> methodResultMap;// method信息存储对象
 	
+	private static int count = 0;
+	
 	public static String parseVue2FileContent(String fileName, String fileContent) {
 		
 		reactiveValue = "";
@@ -45,9 +47,12 @@ public class Vue2ToVue3Process {
 		
 		String parseResultContent = "";
 		
-		parseResultContent = changeOptionApiToCompositionApi(fileContent);
+		parseResultContent = changeGlobalApi(fileContent);
 		
-		// 组件属性及全局API变化
+		parseResultContent = changeGlobalApiTreeshaking(parseResultContent);
+		
+		parseResultContent = changeOptionApiToCompositionApi(parseResultContent);
+		
 		parseResultContent = changeComponentPropertys(parseResultContent);
 		
 		// 路由以及状态管理器
@@ -65,6 +70,117 @@ public class Vue2ToVue3Process {
 		System.out.println("解析后：\n" + parseResultContent);
 		
 		return parseResultContent;
+	}
+	
+	/**
+	 * 全局api处理
+	 * 
+	 * @param fileContent 要处理的内容
+	 * @return 处理后的内容
+	 */
+	private static String changeGlobalApi(String fileContent) {
+		
+		String temp = "";
+		String vue2GlobalApi = "";// vue2对应的全局api
+		String vue3GlobalApi = "";// vue3对应的全局api
+		
+		int endIndex = -1;// 获取截取结束位置
+		Boolean findGlobalApi = false;
+		
+		for(String globalApiValue:ConvertParam.Vue2ToVue3GlobalApiList)
+        {
+			// 无箭头的直接移除
+			if (globalApiValue.indexOf(ConvertParam.CONVERT_STRING) > -1) {
+				
+				vue2GlobalApi = globalApiValue.substring(0, globalApiValue.indexOf(ConvertParam.CONVERT_STRING));
+				
+				vue3GlobalApi = globalApiValue.substring(globalApiValue.indexOf(ConvertParam.CONVERT_STRING) + 2, globalApiValue.length());
+			} else {
+				
+				vue2GlobalApi = globalApiValue;
+				
+				vue3GlobalApi = "";
+			}
+			
+			// 判断文件内容中是否有对应api
+			if (fileContent.indexOf(vue2GlobalApi) > -1) {
+				
+				// 清除无需转换的内容
+				if ("".equals(vue3GlobalApi)) {
+					
+					temp = fileContent.substring(fileContent.indexOf(vue2GlobalApi), fileContent.length());
+					
+					endIndex = TxtContentUtil.getStatementEndIndex(temp, 0);
+					
+					temp = temp.substring(0, endIndex);
+					
+					fileContent = fileContent.replaceAll(temp, "");
+					
+				} else {
+					
+					findGlobalApi = true;
+					
+					fileContent = fileContent.replaceAll(vue2GlobalApi, vue3GlobalApi);
+				}
+			}
+        }
+		
+		if (findGlobalApi) {
+			
+			addVue3ImportContent("vue", "createApp");// 引入createApp
+			
+			addVue3DefineContent("app", "const app = createApp({});");
+		}
+		
+		return fileContent;
+	}
+	
+	/**
+	 * 全局api Treeshaking处理
+	 * 
+	 * @param fileContent 要处理的内容
+	 * @return 处理后的内容
+	 */
+	private static String changeGlobalApiTreeshaking(String fileContent) {
+		
+		// 1. Vue.nextTick / $nextTick
+		// 2. Vue.observable (用 Vue.reactive 替换)
+		// 3. Vue.version
+		// 4. Vue.compile (仅完整构建版本)
+		// 5. Vue.set (仅兼容构建版本)
+		// 6. Vue.delete (仅兼容构建版本)
+		
+		String temp = "";
+		
+		int endIndex = -1;// 获取截取结束位置
+		
+		if (fileContent.indexOf("Vue.nextTick") > -1) {
+			
+			addVue3ImportContent("vue", "nextTick");// 引入nextTick
+			
+			fileContent = fileContent.replaceAll("Vue.nextTick", "nextTick");
+		}
+		
+		if (fileContent.indexOf("$nextTick") > -1) {
+			
+			addVue3ImportContent("vue", "nextTick");// 引入nextTick
+			
+			endIndex = 0;
+			
+			for (int i = fileContent.indexOf("$nextTick");i > -1;i--) {
+				
+				if (' ' == fileContent.charAt(i)) {
+					endIndex = i;
+					break;
+				}
+			}
+			
+			temp = fileContent.substring(endIndex + 1, fileContent.indexOf("$nextTick") + "$nextTick".length());
+			
+			fileContent = fileContent.replace(temp, "nextTick");
+		}
+		
+		return fileContent;
 	}
 	
 	/**
@@ -145,8 +261,9 @@ public class Vue2ToVue3Process {
 			
 		}
 		
-		// 没得到options api ，则无需处理api的解析
-		if ("".equals(vue2ResultTxt)) {
+		// 1. 没得到options api ，则无需处理api的解析
+		// 2. export default xxx
+		if ("".equals(vue2ResultTxt) || vue2ResultTxt.indexOf('{') < 0) {
 			
 			return fileContent;
 		}
@@ -157,14 +274,32 @@ public class Vue2ToVue3Process {
 		// 得到花括号里边的内容
 		String optionsConfigText = tempText.substring(tempText.indexOf('{'), tempText.lastIndexOf('}') + 1);
 		String optionsConfigTextBak = optionsConfigText;
+		String dataResultText = "";
 		
 		methodResultMap = new HashMap<>();
 		dataResultList = new ArrayList<String>();
 		
+		// 获取props整个信息
+		if (optionsConfigText.indexOf("props:") > -1) {
+			
+			dataResultText = "";
+			
+			startInex = optionsConfigText.indexOf("props:");
+			
+			tempText = TxtContentUtil.getContentByTag(optionsConfigText, startInex, '{', '}');// 得到一整个props包裹信息
+			
+			dataResultText = tempText;// 存储用于后续整个替换内容
+			
+			// 存储props 信息用于生成文件内容
+			
+			optionsConfigText = TxtContentUtil.deleteFirstComma(optionsConfigText, optionsConfigText.indexOf(dataResultText) + dataResultText.length());// 删除末尾的逗号
+			optionsConfigText = optionsConfigText.replace(dataResultText, "");// 替换掉整个props的内容
+		}
+		
 		// 获取data中属性信息
 		if (optionsConfigText.indexOf("data:") > -1 || optionsConfigText.indexOf("data()") > -1) {
 			
-			String dataResultText = "";
+			dataResultText = "";
 			
 			startInex = optionsConfigText.indexOf("data:") > -1?optionsConfigText.indexOf("data:"):optionsConfigText.indexOf("data()");
 			
@@ -200,11 +335,16 @@ public class Vue2ToVue3Process {
 			}
 			
 			if (!"const state = reactive({\n".equals(reactiveValue)) {
+				
 				reactiveValue = reactiveValue.substring(0, reactiveValue.lastIndexOf(',')) + "\n";// 去除最后一个逗号
+				
+				reactiveValue += "});\n";
+				
 				addVue3ImportContent("vue", "reactive");
+			} else {
+				
+				reactiveValue = "";
 			}
-			
-			reactiveValue += "});\n";
 			
 			optionsConfigText = TxtContentUtil.deleteFirstComma(optionsConfigText, optionsConfigText.indexOf(dataResultText) + dataResultText.length());// 删除末尾的逗号
 			optionsConfigText = optionsConfigText.replace(dataResultText, "");// 替换掉整个data的内容
@@ -260,14 +400,19 @@ public class Vue2ToVue3Process {
 		
 		tempText = TxtContentUtil.getContentByTag(optionsConfigText, startInex, '{', '}');// 得到method整个方法
 		
+		if ("computed".equals(methodType)) count = 0;
+		
 		// 得到里边所有的方法并封装成一个map对象返回
-		getMethodResultMap("method".equals(methodType)?"":methodType, tempText.substring(tempText.indexOf('{') + 1, tempText.lastIndexOf('}')).trim());
+		getMethodResultMap("methods".equals(methodType)?"":methodType, tempText.substring(tempText.indexOf('{') + 1, tempText.lastIndexOf('}')).trim());
 		
 		return tempText;// 得到整个方法内容用于替换
 	}
 	
 	// 获取option api中转换到setup的所有方法
 	private static void getMethodResultMap(String methodType, String methodContent){
+		
+		// 为空的时候无需解析
+		if ("".equals(methodContent)) return;
 		
 		String tempText = "";
 		String methodContentText = "";
@@ -279,19 +424,18 @@ public class Vue2ToVue3Process {
 		
 		int endIndex = -1;// 获取截取结束位置
 		
-		// 先得到第一个方法的所有信息
-		endIndex = TxtContentUtil.getTagEndIndex(methodContent, '{', '}') + 1;
-		
-		methodContentText = methodContent.substring(0, endIndex);
-				
 		// 判断是否有注释
-		if (methodContentText.indexOf("/**") > -1) {
+		if (methodContent.indexOf("/**") == 0) {
 			
-			endIndex = TxtContentUtil.getTagEndIndex(methodContent, '/', '/');
-			methodDescription = methodContentText.substring(methodContentText.indexOf("/**"), endIndex);
-		} else if (methodContentText.indexOf("//") > -1) {
+			tempText = methodContent.substring(methodContent.indexOf("/**"), methodContent.length());
 			
-			tempText = methodContentText.substring(methodContentText.indexOf("//"), methodContentText.length());
+			endIndex = TxtContentUtil.getTagEndIndex(methodContent, '/', '/') + 1;
+			
+			methodDescription = methodContent.substring(methodContent.indexOf("/**"), endIndex);
+			
+		} else if (methodContent.indexOf("//") == 0) {
+			
+			tempText = methodContent.substring(methodContent.indexOf("//"), methodContent.length());
 			
 			for (int i = 0;i<tempText.length();i++) {
 				if (tempText.charAt(i) == '\n') {
@@ -300,11 +444,34 @@ public class Vue2ToVue3Process {
 				}
 			}
 			
-			methodDescription = methodContentText.substring(methodContentText.indexOf("//"), endIndex);
+			methodDescription = methodContent.substring(methodContent.indexOf("//"), endIndex);
 			
 		}
 		
-		if (!"".equals(methodDescription)) methodContentText = methodContentText.substring(methodContentText.indexOf(methodDescription) + methodDescription.length(), methodContentText.length());
+		if (!"".equals(methodDescription)) methodContent = methodContent.substring(methodContent.indexOf(methodDescription) + methodDescription.length(), methodContent.length());
+		
+		// 防止参数里边含有{}导致解析异常
+		if (methodContent.indexOf('(') < methodContent.indexOf('{')) {
+			
+			endIndex = TxtContentUtil.getTagEndIndex(methodContent, '(', ')') + 1;
+		} else {
+			
+			endIndex = -1;
+		}
+		
+		// 先得到第一个方法的所有信息
+		if (endIndex == -1) {
+			
+			endIndex = TxtContentUtil.getTagEndIndex(methodContent, '{', '}') + 1;
+		} else {
+			
+			tempText = methodContent.substring(endIndex, methodContent.length());
+			
+			endIndex += TxtContentUtil.getTagEndIndex(tempText, '{', '}') + 1;
+		}
+		
+		methodContentText = methodContent.substring(0, endIndex);
+		
 		methodContentText = methodContentText.trim();
 		
 		// 获取方法名和参数信息
@@ -317,7 +484,8 @@ public class Vue2ToVue3Process {
 		
 		// 获取方法体信息
 		tempText = methodContentText.substring(methodContentText.indexOf('{'), methodContentText.length());
-		methodBody = tempText.substring(0, tempText.indexOf('}') + 1);
+		
+		methodBody = TxtContentUtil.getContentByTag(tempText, 0, '{', '}');
 		
 		methodContent = methodContent.substring(methodContent.indexOf(methodContentText) + methodContentText.length(), methodContent.length());
 		
@@ -329,11 +497,24 @@ public class Vue2ToVue3Process {
 		methodMap.put("methodParams", methodParams);
 		methodMap.put("methodBody", methodBody);
 		
-		methodResultMap.put("".equals(methodType)?methodName:methodType, methodMap);
+		tempText = methodType;
+		
+		if ("computed".equals(methodType)) {
+			tempText = methodType + "_" + count;
+			count++;
+		}
+		
+		methodResultMap.put("".equals(tempText)?methodName:tempText, methodMap);
 		
 		// 判断是否需要递归解析
 		if (methodContent.indexOf('{') > -1) {
-			getMethodResultMap(methodType, methodContent.trim());
+			
+			methodContent = methodContent.trim();
+			
+			// 第一个如果是逗号
+			if (methodContent.indexOf(',') == 0) methodContent = methodContent.substring(1, methodContent.length()).trim();
+			
+			getMethodResultMap(methodType, methodContent);
 		}
 		
 	}
@@ -410,6 +591,7 @@ public class Vue2ToVue3Process {
 	private static String assembleVue3SetUpApi() {
 		
 		String vue3SetUpResultContent = "";
+		String methodDescription = "";
 		String methodBodyContent = "";
 		
 		Map<String, String> methodMap;
@@ -434,6 +616,7 @@ public class Vue2ToVue3Process {
 			
 			// 判断是否为生命周期函数
 			if (methodMap.containsKey("liftcycleFunction")) {
+				
 				vue3SetUpResultContent += methodMap.get("methodName") + "(() => " + methodBodyContent + ");\n";
 				
 				// 处理引入信息
@@ -447,7 +630,7 @@ public class Vue2ToVue3Process {
 					addVue3ImportContent("vue", "watch");
 				} 
 				// computed 函数单独处理
-				else if ("computed".equals(entry.getKey())) {
+				else if (entry.getKey().indexOf("computed_") == 0) {
 					
 					dataResultList.add(methodMap.get("methodName"));
 					
@@ -458,7 +641,11 @@ public class Vue2ToVue3Process {
 					
 					dataResultList.add(methodMap.get("methodName"));
 					
-					vue3SetUpResultContent += "const " + methodMap.get("methodName") + " = (" + methodMap.get("methodParams") + ") => " + methodBodyContent + ";\n";
+					methodDescription = methodMap.get("methodDescription");
+					
+					if (!"".equals(methodDescription)) methodDescription += "\n";
+					
+					vue3SetUpResultContent += methodDescription + "const " + methodMap.get("methodName") + " = (" + methodMap.get("methodParams") + ") => " + methodBodyContent + ";\n";
 				}
 			}
 	    }
@@ -479,6 +666,30 @@ public class Vue2ToVue3Process {
 		}
 		
 		return vue3SetUpResultContent;
+	}
+	
+	/**
+	 * 添加定义信息部分
+	 * 
+	 * @param variableKey 变量名
+	 * @param variableContent 具体定义内容
+	 */
+	private static void addVue3DefineContent(String variableKey, String variableContent) {
+		
+		Map<String, String> defineMap;
+		
+		if (parseResultMap.containsKey("define")) {
+			defineMap = parseResultMap.get("define");
+		} else {
+			defineMap= new HashMap<>();
+		}
+		
+		if (!defineMap.containsKey(variableKey)) {
+			
+			defineMap.put(variableKey, variableContent);
+			
+			parseResultMap.put("define", defineMap);
+		}
 	}
 	
 	/**
@@ -654,13 +865,15 @@ public class Vue2ToVue3Process {
 		return fileContent;
 	}
 	
+	/**
+	 * 组件属性转换
+	 * @param fileContent
+	 * @return
+	 */
 	private static String changeComponentPropertys(String fileContent) {
 		
 		// 1 v-bind="@xxx" -> v-bind="xxx"
 		// 2 v-on: -> @
-		// 3 Vue.filter -> app.config.globalProperties.$filter
-		// 4 Vue.directive -> app.directive
-		// 5 Vue.mixin -> app.mixin
 		
 		String temp = "";
 		String vue2property = "";// vue2对应的属性
@@ -668,14 +881,6 @@ public class Vue2ToVue3Process {
 		String vue3import = "";// 获取需要在vue3 import部分
 		String vue3define = "";// 获取需要在vue3 define部分
 		String vue3importContent = "";//
-		 
-		Map<String, String> defineMap;
-		
-		if (parseResultMap.containsKey("define")) {
-			defineMap = parseResultMap.get("define");
-		} else {
-			defineMap= new HashMap<>();
-		}
 		
 		for (int i=0;i<ConvertParam.Vue2ToVue3PropertyList.length;i++) {
 			
@@ -716,15 +921,9 @@ public class Vue2ToVue3Process {
 				
 				temp = vue3define.substring(vue3define.indexOf("const ") + "const ".length(), vue3define.indexOf(" = ")).trim();
 				
-				if (!defineMap.containsKey(temp)) {
-					defineMap.put(temp, vue3define + ";");
-				}
+				addVue3DefineContent(temp, vue3define + ";");
 			}
 			
-		}
-		
-		if (defineMap.size() > 0) {
-			parseResultMap.put("define", defineMap);
 		}
 		
 		return fileContent;

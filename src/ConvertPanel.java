@@ -9,14 +9,13 @@ import javax.swing.JTextField;
 import javax.swing.filechooser.FileSystemView;
 
 import converttype.Vue2ToVue3Process;
+import utils.FileOperationUtil;
 
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 
 public class ConvertPanel extends JFrame {
@@ -47,6 +46,14 @@ public class ConvertPanel extends JFrame {
 	private ArrayList<String> copyFileList;// 直接拷贝到目标的文件
 	
 	private ArrayList<String> processFileList;// 需要解析的文件信息
+	
+	private ArrayList<String> errorFileList;// 解析异常的文件信息
+	
+	public int fileTypeIndex;// 选择文件类型
+	
+	public String selectedFileDir = "";// 选择的文件夹路径
+	
+	public JTextField outputTextField;// 输出文件路径信息
 	
 	public JLabel processResultLabel;// 显示文件处理信息
 	
@@ -91,7 +98,7 @@ public class ConvertPanel extends JFrame {
         JPanel outputFilePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));// 输出文件路径设置
         
         JLabel outputLabel= new JLabel("输出路径：");
-        JTextField outputTextField = new JTextField(18);
+        outputTextField = new JTextField(18);
         outputTextField.setText(FileSystemView.getFileSystemView().getHomeDirectory().toString() + "/");// 设置默认输出目录
         outputFilePanel.add(outputLabel); 
         outputFilePanel.add(outputTextField);
@@ -119,13 +126,13 @@ public class ConvertPanel extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
 
-            	int selectedIndex = fileTypeBox.getSelectedIndex();
+            	fileTypeIndex = fileTypeBox.getSelectedIndex();
             	
             	JFileChooser jfc = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
-            	jfc.setDialogTitle("选择"+(selectedIndex == 0?"文件":"文件夹"));
+            	jfc.setDialogTitle("选择"+(fileTypeIndex == 0?"文件":"文件夹"));
                 jfc.setAcceptAllFileFilterUsed(false);
                 
-                if (selectedIndex == 1) {
+                if (fileTypeIndex == 1) {
                 	jfc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
                 }
                 
@@ -133,18 +140,20 @@ public class ConvertPanel extends JFrame {
                 
                 if (returnValue == JFileChooser.APPROVE_OPTION) {
                 	
-                	if (selectedIndex == 1) {
+                	errorFileList = new ArrayList<String>();
+                	
+                	if (fileTypeIndex == 1) {
                 		if (jfc.getSelectedFile().isDirectory()) {
                 			hasSelectedFileFlg = true;
-                			fileList = new ArrayList<String>();
-                			getProcessFileList(jfc.getSelectedFile());
-                			selectedFilePathValueLabel.setText(jfc.getSelectedFile().toString() + "/");
+                			fileList = FileOperationUtil.getProcessFileList(jfc.getSelectedFile());
+                			selectedFileDir = jfc.getSelectedFile().toString() + "/";
+                			selectedFilePathValueLabel.setText("已选择文件夹！");
                         }
                 	} else {
                 		hasSelectedFileFlg = true;
                 		fileList = new ArrayList<String>();
                 		fileList.add(jfc.getSelectedFile().getPath().toString());
-                		selectedFilePathValueLabel.setText(jfc.getSelectedFile().getPath().toString());
+                		selectedFilePathValueLabel.setText("已选择文件！");
                 	}
                     
                 }
@@ -220,66 +229,58 @@ public class ConvertPanel extends JFrame {
         setVisible(true);//设置窗口是否可见
     }
 	
-	// 递归获取文件信息
-	private void getProcessFileList(File fileDir) {
-		
-		File[] files = fileDir.listFiles();
-		
-		if (files != null) {
-			
-			for (File f : files) {
-				if (f.isFile()) {
-					fileList.add(f.toString());
-				} else {
-					getProcessFileList(f);
-				}
-			}
-		}
-	}
-	
-	// 读取文件内容
-	public String readFileUsingInputStream(File file) throws IOException
-	{
-		InputStream ins = null;
-		StringBuffer buffer = new StringBuffer();//用一个buffer保存读取的数据
-	
-		try{
-			ins = new FileInputStream(file);//FileInputStream的构造方法，指定某个文件
-		
-			byte[] tmp = new byte[10];
-		
-			int length = 0;
-		
-			//int read(byte[] a)方法，从输入流读取数据，并存储于缓冲区a内，返回值为读取字节数
-			//流读取最后完好的保存了换行 空格
-			while((length = ins.read(tmp)) != -1)//每次读10字节
-			{
-				buffer.append(new String(tmp,0,length));
-			}
-		}catch(Exception e){
-			e.printStackTrace();
-		}finally{
-			if(ins != null)
-			{
-				ins.close();
-			}
-		}
-	
-		return buffer.toString();
-	}
-	
 	/**
 	 * 读取文件内容开始解析
 	 * 
 	 */
 	private void readFileContentAndParse(int fileIndex) {
 		
+		String outPutFileDir = outputTextField.getText() + "Documents/测试数据/output/";
+		
 		// 判断是否解析完毕
 		if (fileIndex == processFileList.size()) {
-			System.out.print("所有文件解析完成，准备生成最终的文件包");
+			
+			System.out.println("所有文件解析完成");
+			
+			String showResult = "<html><body>";
+			
+			if (fileTypeIndex == 1) {
+				
+				System.out.println("开始拷贝文件");
+				
+				FileOperationUtil.copySourceFileList(copyFileList, selectedFileDir, outPutFileDir);// 拷贝文件内容并显示转换结果信息
+				
+				System.out.println("文件拷贝完成");
+				
+				showResult = "<html><body>";
+				
+				showResult += "解析完成！<br/>";
+				
+				showResult += "选择文件" + fileList.size() + "个;";
+				
+				showResult += "需解析" + processFileList.size() + "个;";
+				
+				showResult += "解析成功" + (processFileList.size() - errorFileList.size()) + "个;<br/>";
+				
+				showResult += "解析异常" + errorFileList.size() + "个;<br/>";
+				
+				showResult += "</body></html>";
+			} else {
+				
+				if (errorFileList.size() == 0) {
+					
+					showResult = "解析成功！";
+				} else {
+					
+					showResult = "解析失败！";
+				}
+			}
+			
+			showProcessContent(showResult, 1);
 			return;
 		}
 		
+		String relativeFilePath = "";
 		String fileContentValue = "";
 		String currentFilePath = processFileList.get(fileIndex).toString();
 		
@@ -288,15 +289,16 @@ public class ConvertPanel extends JFrame {
 		String parseResultFileContent = "";
     	
     	try {
-    		fileContentValue = readFileUsingInputStream(new File(processFileList.get(fileIndex).toString()));
+    		fileContentValue = FileOperationUtil.readFileUsingInputStream(new File(processFileList.get(fileIndex).toString()));
     	} catch(IOException err) {
-    		showProcessContent("文件读取异常："+currentFilePath);
+    		showProcessContent("文件读取异常：" + currentFilePath, 0);
+    		errorFileList.add(currentFilePath);
     		processFileIndex++;
     		readFileContentAndParse(processFileIndex);
     		return;
     	}
     	
-    	showProcessContent("当前处理文件：" + currentFilePath);
+    	showProcessContent("当前处理文件：" + currentFilePath, 0);
     	
     	// 调用相应类型解析类
     	if (processFileTypeIndex == 1) {
@@ -304,7 +306,40 @@ public class ConvertPanel extends JFrame {
     		resultFilePath = currentFilePath;
     		resultFileName = currentFilePath.lastIndexOf('/') > -1?currentFilePath.substring(currentFilePath.lastIndexOf('/'), currentFilePath.length()):currentFilePath;
     		
+    		System.out.println("当前执行的文件：" + resultFilePath);
+    		
     		parseResultFileContent = Vue2ToVue3Process.parseVue2FileContent(resultFileName, fileContentValue);//vue2->vue3
+    		
+    		String outPutFilePath = "";
+    		
+    		if (fileTypeIndex == 1) {
+    			
+    			// 获取相对路径信息
+    			relativeFilePath = resultFilePath.substring(resultFilePath.indexOf(selectedFileDir) + selectedFileDir.length(), resultFilePath.length());
+    			
+    			outPutFilePath = outPutFileDir + relativeFilePath;
+    			
+    		} else {
+    			
+    			outPutFilePath = outPutFileDir + resultFileName;
+    		}
+    		
+    		try {
+            	
+    			if (fileIndex == 0) {
+    				
+    				FileOperationUtil.createResultFile(outPutFileDir, outPutFileDir);// 创建导出文件夹
+    			}
+    			
+            	FileOperationUtil.createResultFile(outPutFileDir, outPutFilePath);// 创建生成的文件
+            	
+        		FileOperationUtil.writeContentIntoFile(outPutFilePath, parseResultFileContent);//写入文件
+            	
+            } catch(IOException err) {
+    			
+            	System.out.print("创建文件失败:" + resultFilePath);
+    		}
+    		
     	}
     	
     	processFileIndex++;
@@ -319,29 +354,32 @@ public class ConvertPanel extends JFrame {
 	 * @param showResult
 	 * 
 	 */
-	private void showProcessContent(String showResult) {
+	private void showProcessContent(String showResult, int type) {
 		
-		int subLength = 40;
-		
-		String temp = "";
-		
-		if (showResult.length() > subLength) {
-    		temp = showResult;
-    		showResult = "<html><body>";
-    		
-    		for (int j=0;j<temp.length();) {
-    			
-    			if (j+subLength < temp.length()) {
-    				showResult += temp.substring(j, j+subLength) + "<br/>";
-    			} else {
-    				showResult += temp.substring(j, temp.length());
-    			}
-    			
-    			j += subLength;
-    		}
-    		
-    		showResult += "</body></html>";
-    	}
+		if (type == 0) {
+			
+			int subLength = 30;
+			
+			String temp = "";
+			
+			if (showResult.length() > subLength) {
+	    		temp = showResult;
+	    		showResult = "<html><body>";
+	    		
+	    		for (int j=0;j<temp.length();) {
+	    			
+	    			if (j+subLength < temp.length()) {
+	    				showResult += temp.substring(j, j+subLength) + "<br/>";
+	    			} else {
+	    				showResult += temp.substring(j, temp.length());
+	    			}
+	    			
+	    			j += subLength;
+	    		}
+	    		
+	    		showResult += "</body></html>";
+	    	}
+		}
     	
     	processResultLabel.setText(showResult);
 	}
