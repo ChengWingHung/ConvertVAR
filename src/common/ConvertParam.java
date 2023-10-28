@@ -6,6 +6,18 @@ public class ConvertParam {
 		
 	}
 	
+	// 工具名
+	public static String TOOL_NAME = "ConvertVAR";
+		
+	// 版本号信息
+	public static String TOOL_VERSION = "1.0.0";
+	
+	// 本地测试输出文件夹
+	public static String LOCAL_TEST_OUTPUT_FILE_PATH = "Documents/测试数据/";
+		
+	// vue3实际输出文件夹
+	public static String VUE3_OUTPUT_FILE_PATH = "vu2tovue3";
+		
 	// 转换字符标志
 	public static String CONVERT_STRING = "->";
 	
@@ -17,6 +29,9 @@ public class ConvertParam {
 	
 	// 定义新的变量标志
 	public static char DEFINE_STRING = '^';
+	
+	// 定义变量命名规则
+	public static String JS_VARIABLE_REG = "^[A-Za-z0-9_\\$]";
 	
 	// Vue2ToVue3 option api -> setup 方法
 	public static String[] Vue2ToVue3SetUpMethodList = {

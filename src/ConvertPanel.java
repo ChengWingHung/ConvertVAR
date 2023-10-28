@@ -8,6 +8,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.filechooser.FileSystemView;
 
+import common.ConvertParam;
 import converttype.Vue2ToVue3Process;
 import utils.FileOperationUtil;
 
@@ -61,7 +62,7 @@ public class ConvertPanel extends JFrame {
 	
 	public ConvertPanel()
     {
-        setTitle("ConvertVAR v1.0.0");//设置显示窗口标题
+        setTitle(ConvertParam.TOOL_NAME + " " + ConvertParam.TOOL_VERSION);//设置显示窗口标题
         setSize(550,400);//设置窗口显示尺寸
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);//置窗口是否可以关闭
         setLocationRelativeTo(null);//窗口在屏幕中间显示
@@ -235,7 +236,7 @@ public class ConvertPanel extends JFrame {
 	 */
 	private void readFileContentAndParse(int fileIndex) {
 		
-		String outPutFileDir = outputTextField.getText() + "Documents/测试数据/output/";
+		String outPutFileDir = outputTextField.getText() + ConvertParam.LOCAL_TEST_OUTPUT_FILE_PATH + ConvertParam.VUE3_OUTPUT_FILE_PATH + "/";
 		
 		// 判断是否解析完毕
 		if (fileIndex == processFileList.size()) {
@@ -325,11 +326,6 @@ public class ConvertPanel extends JFrame {
     		}
     		
     		try {
-            	
-    			if (fileIndex == 0) {
-    				
-    				FileOperationUtil.createResultFile(outPutFileDir, outPutFileDir);// 创建导出文件夹
-    			}
     			
             	FileOperationUtil.createResultFile(outPutFileDir, outPutFilePath);// 创建生成的文件
             	

@@ -1,5 +1,11 @@
 package utils;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
+import common.ConvertParam;
+
 public class TxtContentUtil {
 
 	public TxtContentUtil() {
@@ -184,6 +190,66 @@ public class TxtContentUtil {
 		}
 		
 		return sourceText;
+	}
+	
+	/**
+	 * 获取注释信息部分
+	 * 
+	 * @param sourceText
+	 * @return 注释信息内容
+	 */
+	public static String getCommentInformation(String sourceText) {
+		
+		String tempText = "";
+		String commentDescription = "";
+		
+		int endIndex = -1;// 获取截取结束位置
+		
+		if (sourceText.indexOf("/**") == 0) {
+			
+			tempText = sourceText.substring(sourceText.indexOf("/**"), sourceText.length());
+			
+			endIndex = TxtContentUtil.getTagEndIndex(sourceText, '/', '/') + 1;
+			
+			commentDescription = sourceText.substring(sourceText.indexOf("/**"), endIndex);
+			
+		} else if (sourceText.indexOf("//") == 0) {
+			
+			tempText = sourceText.substring(sourceText.indexOf("//"), sourceText.length());
+			
+			for (int i = 0;i<tempText.length();i++) {
+				if (tempText.charAt(i) == '\n') {
+					endIndex = i;
+					break;
+				}
+			}
+			
+			commentDescription = sourceText.substring(sourceText.indexOf("//"), endIndex);
+			
+		}
+		
+		return commentDescription;
+	}
+	
+	/**
+	 * 得到不是变量命名位置的索引
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static int getNotVariableIndex(String sourceText) {
+		
+		int index = -1;
+		
+		for (int i = 0;i < sourceText.length();i++) {
+			
+			if (!String.valueOf(sourceText.charAt(0)).matches(ConvertParam.JS_VARIABLE_REG)) {
+				index = i;
+				break;
+			}
+		}
+		
+		return index;
 	}
 	
 	/**
