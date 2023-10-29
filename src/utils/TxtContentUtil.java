@@ -255,14 +255,185 @@ public class TxtContentUtil {
 	/**
 	 * 处理内容格式
 	 * 
+	 * @param sourceText 要处理的内容
+	 * @param fileType 文件类型
+	 * @param framworkName 来自vue 还是react
+	 * @return
+	 */
+	public static String processFileContentFormat(String sourceText, String fileType, String framworkName) {
+		
+		String tempText = "";
+		String resultContent = "";
+		
+		int endIndex = -1;
+		
+		if ("vue".equals(framworkName)) {
+			
+			if ("js".equals(fileType)) {
+				
+				sourceText = clearLineStartBlankContent(sourceText);
+				
+				sourceText = processJSContentFormat(sourceText, 2);
+			} else {
+				
+				if (sourceText.indexOf("<script") > -1 && sourceText.indexOf("</script") > -1) {
+					
+					tempText = sourceText.substring(0, sourceText.indexOf("<script"));
+					
+					// 清除掉<script 前的空格
+					if (tempText.indexOf('\n') > -1 && "".equals(tempText.substring(tempText.indexOf('\n') + 1, tempText.length()).trim())) {
+						
+						for (int j=tempText.length() - 1;j > -1;j--) {
+							if (' ' == tempText.charAt(j)) {
+								tempText = tempText.substring(0, j) + tempText.substring(j + 1, tempText.length());
+								j++;
+								continue;
+							}
+							
+							break;
+						}
+						
+						sourceText = tempText + sourceText.substring(sourceText.indexOf("<script"), sourceText.length());
+					}
+					
+					tempText = sourceText.substring(sourceText.indexOf("</script"), sourceText.length());
+					
+					endIndex = tempText.indexOf('>');
+					
+					tempText = sourceText.substring(sourceText.indexOf("<script"), sourceText.indexOf("</script") + endIndex + 1);
+							
+					resultContent = tempText;
+					
+					tempText = clearLineStartBlankContent(tempText);
+					
+					tempText = processJSContentFormat(tempText, 4);
+					
+					sourceText = sourceText.replace(resultContent, tempText);
+					
+				} else {
+					
+					sourceText = clearLineStartBlankContent(sourceText);
+					
+					sourceText = processJSContentFormat(sourceText, 2);
+				}
+			}
+		}
+		
+		return sourceText;
+	}
+	
+	/**
+	 * 清空每行的头部空格部分
+	 * 
 	 * @param sourceText
 	 * @return
 	 */
-	public static String processFileContentFormat(String sourceText) {
+	public static String clearLineStartBlankContent(String sourceText) {
 		
-		sourceText = TxtContentUtil.clearBlankContentInLine(sourceText);// 处理整行都是空白的内容
+		String tempText = "";
+		
+		// 开头就是空格去除
+		if (sourceText.indexOf(' ') == 0) sourceText = sourceText.trim();
+		
+		// 判断换行标志
+		if (sourceText.indexOf('\n') > -1) {
+			
+			tempText = sourceText.substring(sourceText.indexOf('\n') + 1, sourceText.length()).trim();
+			
+			if (tempText.indexOf('\n') > -1) {
+				
+				sourceText = sourceText.substring(0, sourceText.indexOf('\n') + 1) + clearLineStartBlankContent(tempText);
+			} else {
+				
+				sourceText = sourceText.substring(0, sourceText.indexOf('\n') + 1) + tempText;
+			}
+			
+		}
 		
 		return sourceText;
+	}
+	
+	/**
+	 * 处理JS内容格式
+	 * 
+	 * @param sourceText 要处理js的内容
+	 * @param indentCount 添加的空格数
+	 * @return
+	 */
+	public static String processJSContentFormat(String sourceText, int indentCount) {
+		
+		// 不需要处理直接返回结果信息
+		if ("".equals(sourceText) || sourceText.indexOf('\n') < 0) {
+			
+			if (!"".equals(sourceText)) sourceText = getIndentCountResutl(indentCount) + sourceText;
+			
+			return sourceText;
+		}
+		
+		String tempText = "";
+		String lineContent = "";
+		
+		int endIndex = -1;
+		
+		lineContent = sourceText.substring(0, sourceText.indexOf('\n') + 1);
+		
+		if (lineContent.indexOf('{') > -1) {
+			
+			tempText = sourceText.substring(lineContent.indexOf('{'), sourceText.length());
+			
+			endIndex = getTagEndIndex(tempText, '{', '}') + lineContent.indexOf('{');
+			
+			if (lineContent.indexOf('{') + 1 < endIndex) {
+				
+				tempText = sourceText.substring(lineContent.indexOf('{') + 1, endIndex);
+				
+				if (tempText.indexOf('\n') > -1) {
+					
+					return getIndentCountResutl(indentCount) + lineContent.substring(0, lineContent.indexOf('{') + 1) + processJSContentFormat(tempText, indentCount + 2) + processJSContentFormat(sourceText.substring(endIndex, sourceText.length()), indentCount);
+				}
+			}
+			
+		}
+		
+		sourceText = getIndentCountResutl(indentCount) + lineContent + processJSContentFormat(sourceText.substring(sourceText.indexOf('\n') + 1, sourceText.length()), indentCount);// 添加空格
+		
+		return sourceText;
+	}
+	
+	/**
+	 * 添加空格
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String getIndentCountResutl(int indentCount) {
+		
+		String blankResult = "";
+		
+		for (int i=0;i<indentCount;i++) {
+			blankResult += " ";
+		}
+		
+		return blankResult;
+	}
+	
+	/**
+	 * 按命名规则重命名变量
+	 * 
+	 * @param variableName 变量名
+	 * @return
+	 */
+	public static String reNameVariable(String variableName) {
+		
+		for (int i = 0;i < variableName.length();i++) {
+			
+			if (!String.valueOf(variableName.charAt(i)).matches(ConvertParam.JS_VARIABLE_REG)) {
+				variableName = variableName.replaceAll(String.valueOf(variableName.charAt(i)), "");
+				i--;
+			}
+		}
+		
+		return variableName;
 	}
 	
 	/**

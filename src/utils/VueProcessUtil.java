@@ -12,6 +12,8 @@ public class VueProcessUtil {
 		
 	}
 	
+	private static String vueTempText = "";
+	
 	/**
 	 * 处理vue2 props信息
 	 * 
@@ -92,7 +94,7 @@ public class VueProcessUtil {
 			} else if (!"".equals(sourceText)){
 				
 				endIndex = TxtContentUtil.getNotVariableIndex(sourceText);
-				dataName = sourceText.substring(0, endIndex);
+				dataName = sourceText.substring(0, endIndex == -1?sourceText.length():endIndex);
 			}
 			
 			if (!"".equals(dataName.trim()))
@@ -199,7 +201,6 @@ public class VueProcessUtil {
 		if (sourceText.indexOf(".sync=") > -1) {
 			
 			String tempTxt = "";
-			String nextProcessText = "";
 			
 			int startIndex = -1;
 			
@@ -217,16 +218,232 @@ public class VueProcessUtil {
 			if (startIndex != -1) {
 				
 				// 添加v-model
-				sourceText = sourceText.substring(0, startIndex) + "v-model" + sourceText.substring(startIndex + 1, sourceText.length());
+				sourceText = sourceText.substring(0, startIndex) + "v-model:" + sourceText.substring(startIndex + 1, sourceText.length());
 				
 				startIndex = sourceText.indexOf(".sync=");
 				
 				// 清空.sync= 并继续后续判断处理
 				
-				return sourceText.substring(0, startIndex) + replaceSyncPropsToVmodel(sourceText.substring(startIndex + ".sync=".length(), sourceText.length()));
+				return sourceText.substring(0, startIndex) + replaceSyncPropsToVmodel(sourceText.substring(startIndex + ".sync=".length() - 1, sourceText.length()));
 			}
 		}
 		
 		return sourceText;
 	}
+	
+	/**
+	 * vue2的key 值转换处理，<template v-for> 子节点的key 需要绑定到template 上
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String changeTemplateKeyBindObject(String sourceText) {
+		
+		// 无template 内容直接返回，<template>这种说明无v-for 属性
+		if (sourceText.indexOf("<template ") < 0) return sourceText;
+		
+		String tempTxt = "";
+		
+		tempTxt = sourceText.substring(sourceText.indexOf("<template "), sourceText.length());
+		
+		// template无v-for 属性直接返回
+		if (sourceText.indexOf(" v-for=") < 0 || sourceText.indexOf(" v-for=") > sourceText.indexOf(">")) return sourceText;
+		
+		String vTemplateResultContent = ""; // 用于替换的template 的子内容
+		String vTemplateContent = ""; // 
+		String vForContent = ""; // v-for 的内容
+		String vForItemTxt = ""; // v-for 内容中的item字段
+		
+		int endIndex = -1;
+		
+		tempTxt = tempTxt.substring(tempTxt.indexOf(" v-for=") + " v-for=".length(), tempTxt.indexOf(">"));
+		
+		endIndex = TxtContentUtil.getTagEndIndex(tempTxt, tempTxt.charAt(0), tempTxt.charAt(0));
+		
+		vForContent = tempTxt.substring(1, endIndex + 1);
+		
+		vForItemTxt = vForContent.substring(0, vForContent.indexOf(' ')).trim();
+		
+		vTemplateContent = sourceText.substring(sourceText.indexOf("<template "), sourceText.indexOf("</template"));
+		
+		// 得到template 的子内容
+		vTemplateContent = vTemplateContent.substring(vTemplateContent.indexOf('>') + 1, vTemplateContent.length());
+		
+		vTemplateResultContent = vTemplateContent;
+		
+		vueTempText = ""; // 获取绑定的item.字段 信息
+		// 处理掉 vTemplateContent 中含有 vForItemTxt 的key信息
+		vTemplateContent = processTemplateContentKey(vTemplateContent, vForItemTxt);
+		
+		sourceText = sourceText.replace(vTemplateResultContent, vTemplateContent);
+		
+		if (!"".equals(vueTempText)) {
+			
+			endIndex = sourceText.indexOf(vForContent);
+			
+			sourceText = sourceText.substring(0, endIndex + vForContent.length()) + " :key=\"" + vueTempText + "\" " + sourceText.substring(endIndex + vForContent.length(), sourceText.length());
+		}
+		
+		return sourceText;
+	}
+	
+	/**
+	 * 处理vTemplateContent 中含有 vForItemTxt 的key信息
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String processTemplateContentKey(String sourceText, String itemText) {
+		
+		// 未设置key 则不处理
+		if (sourceText.indexOf(" :key=") < 0) return sourceText;
+		
+		String tempTxt = "";
+		String keyContent = "";
+		
+		keyContent = sourceText.substring(sourceText.indexOf(" :key="), sourceText.length());
+		
+		int endIndex = -1;
+		
+		tempTxt = keyContent.substring(" :key=".length(), keyContent.length());
+		
+		endIndex = TxtContentUtil.getTagEndIndex(tempTxt, tempTxt.charAt(0), tempTxt.charAt(0));
+		
+		tempTxt = tempTxt.substring(0, endIndex);
+		
+		keyContent = keyContent.substring(0, endIndex + 1 + " :key=".length());
+		
+		// 判断是否有v-for 中的 item 信息
+		if (tempTxt.indexOf(itemText + ".") < 0) return sourceText;
+		
+		tempTxt = tempTxt.substring(tempTxt.indexOf(itemText + ".") + (itemText + ".").length(), tempTxt.length());
+		
+		endIndex = -1;
+		
+		for (int i = 0;i<tempTxt.length();i++) {
+			
+			if (!String.valueOf(tempTxt.charAt(i)).matches(ConvertParam.JS_VARIABLE_REG)) {
+				endIndex = i;
+				break;
+			}
+			
+			if (i == tempTxt.length() - 1 && endIndex == -1) {
+				endIndex = tempTxt.length();
+			}
+		}
+		
+		vueTempText = itemText + "." + tempTxt.substring(0, endIndex);
+		
+		return sourceText.substring(0, sourceText.indexOf(keyContent) + keyContent.length()).replace(keyContent, "") + processTemplateContentKey(sourceText.substring(sourceText.indexOf(keyContent) + keyContent.length(), sourceText.length()), itemText);
+	}
+	
+	/**
+	 * 获取render 整个方法内容
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String getRenderAllContentFunction(String sourceText) {
+		
+		String tempText = sourceText;// 临时处理字段
+		String vueRenderContent = "";// Vue.component render 部分内容
+		
+		int endIndex = -1;// 获取截取结束位置
+		
+		// 判断是否有render 函数
+		if (tempText.indexOf("render:") > -1) {
+			
+			vueRenderContent = tempText.substring(tempText.indexOf("render:"), tempText.length());
+			
+		} else if (tempText.indexOf("render(") > -1) {
+			
+			vueRenderContent = tempText.substring(tempText.indexOf("render("), tempText.length());
+		}
+		
+		if (!"".equals(vueRenderContent)) {
+			
+			// 非箭头函数
+			if (vueRenderContent.indexOf('{') > -1) {
+				
+				endIndex = TxtContentUtil.getTagEndIndex(vueRenderContent, '{', '}');
+				
+				vueRenderContent = vueRenderContent.substring(0, endIndex + 1);
+				
+			} else {
+				
+				// 箭头函数
+				vueRenderContent = vueRenderContent.substring(0, vueRenderContent.length());
+				
+				endIndex = TxtContentUtil.getStatementEndIndex(vueRenderContent, 0);
+				
+				vueRenderContent = vueRenderContent.substring(0, endIndex + 1);
+				
+			}
+			
+		}
+		
+		return vueRenderContent;
+	}
+	
+	/**
+	 * 获取render 方法体内容
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String getRenderContentFunction(String sourceText) {
+		
+		String tempText = sourceText;// 临时处理字段
+		String vueRenderContent = "";// Vue.component render 部分内容
+		
+		int endIndex = -1;// 获取截取结束位置
+		
+		// 判断是否有render 函数
+		if (tempText.indexOf("render:") > -1) {
+			
+			vueRenderContent = tempText.substring(tempText.indexOf("render:") + "render:".length(), tempText.length());
+			
+		} else if (tempText.indexOf("render(") > -1) {
+			
+			vueRenderContent = tempText.substring(tempText.indexOf("render(") + "render(".length(), tempText.length());
+		}
+		
+		if (!"".equals(vueRenderContent)) {
+			
+			// 非箭头函数
+			if (vueRenderContent.indexOf('{') > -1) {
+				
+				endIndex = TxtContentUtil.getTagEndIndex(vueRenderContent, '{', '}');
+				
+				vueRenderContent = vueRenderContent.substring(vueRenderContent.indexOf('{'), endIndex + 1);
+				
+			} else {
+				
+				// 箭头函数
+				vueRenderContent = vueRenderContent.substring(vueRenderContent.indexOf("=>") + "=>".length(), vueRenderContent.length());
+				
+				endIndex = TxtContentUtil.getStatementEndIndex(vueRenderContent, 0);
+				
+				vueRenderContent = vueRenderContent.substring(0, endIndex + 1);
+				
+			}
+			
+		}
+		
+		return vueRenderContent;
+	}
+	
+	/**
+	 * 删除 .native 修饰符的所有实例
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String clearOnEventWithNativeKeyWord(String sourceText) {
+		
+		
+		return sourceText;
+	}
+	
+	
 }

@@ -38,6 +38,8 @@ public class Vue2ToVue3Process {
 	
 	private static Map<String, Map> methodResultMap;// method信息存储对象
 	
+	private static Map<String, Map<String, String>> clearInfoMap;// vue3中移除的vue2 信息
+	
 	private static int count = 0;
 	
 	public static String parseVue2FileContent(String fileName, String fileContent) {
@@ -47,6 +49,8 @@ public class Vue2ToVue3Process {
 		parseFileName = fileName;
 		
 		parseResultMap = new HashMap<>();
+		
+		clearInfoMap = new HashMap<>();
 		
 		System.out.println("解析前：\n" + fileContent);
 		
@@ -70,7 +74,7 @@ public class Vue2ToVue3Process {
 		parseResultContent = getVue3FileResultContent(parseResultContent);
 		
 		// 处理解析后的内容格式
-		parseResultContent = TxtContentUtil.processFileContentFormat(parseResultContent);
+		parseResultContent = TxtContentUtil.processFileContentFormat(parseResultContent, FileOperationUtil.getFileType(parseFileName), "vue");
 		
 		System.out.println("解析后：\n" + parseResultContent);
 		
@@ -88,6 +92,8 @@ public class Vue2ToVue3Process {
 		String temp = "";
 		String vue2GlobalApi = "";// vue2对应的全局api
 		String vue3GlobalApi = "";// vue3对应的全局api
+		String vue2ClearName = "";// 要清除的标志
+		String vue2ClearContent = "";// 要清除的部分信息
 		
 		int endIndex = -1;// 获取截取结束位置
 		Boolean findGlobalApi = false;
@@ -115,11 +121,49 @@ public class Vue2ToVue3Process {
 					
 					temp = fileContent.substring(fileContent.indexOf(vue2GlobalApi), fileContent.length());
 					
-					endIndex = TxtContentUtil.getStatementEndIndex(temp, 0);
+					endIndex = TxtContentUtil.getTagEndIndex(temp, '(', ')');
 					
-					temp = temp.substring(0, endIndex);
+					endIndex = TxtContentUtil.getStatementEndIndex(temp, endIndex);
 					
-					fileContent = fileContent.replaceAll(temp, "");
+					vue2ClearContent = temp.substring(0, endIndex);
+					
+					temp = fileContent.substring(0, fileContent.indexOf(vue2GlobalApi));
+					
+					vue2ClearName = "";
+					
+					// 前面的为= 号  说明需要清除
+					if (temp.trim().lastIndexOf('=') == temp.trim().length() - 1) {
+						
+						for (int i=temp.length()-1;i>-1;i--) {
+							
+							if (temp.charAt(i) == '\r' || temp.charAt(i) == '\n' || temp.charAt(i) == ';') {
+								endIndex = i;
+								break;
+							}
+							
+							// 正好是末尾
+							if (temp.length() - 1 == i) {
+								endIndex = i;
+							}
+						}
+						
+						temp = temp.substring(endIndex, temp.length());
+						
+						vue2ClearContent = temp + vue2ClearContent;
+						
+						temp = temp.trim();
+						
+						vue2ClearName = temp.substring(temp.indexOf(' ') + 1, temp.indexOf('='));
+					}
+					
+					fileContent = fileContent.replace(vue2ClearContent, "");
+					
+					Map<String, String> clearDataMap = new HashMap<>();
+					
+					clearDataMap.put(vue2ClearName.trim(), vue2ClearContent.substring(vue2ClearContent.indexOf('(') + 1, vue2ClearContent.lastIndexOf(')')));
+					
+					// 存入删除对象信息中以备用
+					clearInfoMap.put(vue2GlobalApi, clearDataMap);
 					
 				} else {
 					
@@ -199,15 +243,18 @@ public class Vue2ToVue3Process {
 		String tempText = "";// 临时处理字段
 		String vue2ResultTxt = "";// vue2的语句截取结果
 		String changeResultTxt = "";// 转换后的结果
-		String templateHtmlContent = "";// 模板信息
+		
+		String vueComponentName = "";// Vue.component 注册的组件名
+		String vueRenderContent = "";// Vue.component render 部分内容
+		String vueComponentContent = "";// Vue.component 部分内容
 		
 		int startInex = -1;// 获取截取初始位置
 		int endIndex = -1;// 获取截取结束位置
 		
-		// Vue.component( 形式
-		if (fileContent.indexOf("Vue.component(") > -1) {
+		// Vue.component( 形式，单独处理，前面已替换为 app.component
+		if (fileContent.indexOf("app.component(") > -1) {
 			
-			startInex = fileContent.indexOf("Vue.component(");
+			startInex = fileContent.indexOf("app.component(");
 			
 			tempText = fileContent.substring(startInex, fileContent.length());
 			
@@ -217,11 +264,44 @@ public class Vue2ToVue3Process {
 			endIndex = TxtContentUtil.getStatementEndIndex(tempText, endIndex);
 			
 			// 得到Vue.component( 的整段代码
-			vue2ResultTxt = fileContent.substring(startInex, startInex + endIndex);
+			vueComponentContent = fileContent.substring(startInex, startInex + endIndex);
+					
+			tempText = vueComponentContent;
 			
-			// 解析得到模板信息 待处理
-			templateHtmlContent = "";
+			vueComponentName = tempText.substring(tempText.indexOf('(') + 1, tempText.indexOf(',')).trim();
 			
+			vueComponentName = vueComponentName.substring(1, vueComponentName.length() - 1);
+			
+			tempText = vueComponentContent.substring(vueComponentContent.indexOf(',') + 1, vueComponentContent.length()).trim();
+			
+			// 注册的组件信息来自Vue.extend
+			if (!"".equals(vueComponentName) && tempText.indexOf('{') != 0 && clearInfoMap.containsKey("Vue.extend")) {
+				
+				tempText = tempText.substring(0, tempText.indexOf(')')).trim();
+				
+				Map<String, String> clearDataMap = clearInfoMap.get("Vue.extend");
+				
+				for (Map.Entry<String, String> entry : clearDataMap.entrySet()) {
+					
+					if (tempText.equals(entry.getKey())) {
+						
+						changeResultTxt = vueComponentContent;
+						
+						changeResultTxt = changeResultTxt.substring(0, changeResultTxt.lastIndexOf(tempText)) + entry.getValue() + changeResultTxt.substring(changeResultTxt.lastIndexOf(tempText) + tempText.length(), changeResultTxt.length());
+						
+						fileContent = fileContent.replace(vueComponentContent, changeResultTxt);
+						
+						break;
+					}
+				}
+			}
+			
+			if (fileContent.indexOf("export ") < 0) {
+				
+				fileContent = getVue3FileResultContent(fileContent);
+				
+				return fileContent;
+			}
 			
 		}
 		
@@ -249,6 +329,8 @@ public class Vue2ToVue3Process {
 					
 		}
 		
+		dataResultList = new ArrayList<String>();
+		
 		// export default{} 形式
 		if (fileContent.indexOf("export ") > -1) {
 			
@@ -264,6 +346,21 @@ public class Vue2ToVue3Process {
 			// 得到export default 的整段代码
 			vue2ResultTxt = fileContent.substring(startInex, startInex + endIndex);
 			
+			// 获取render 返回信息
+			vueRenderContent = VueProcessUtil.getRenderContentFunction(vue2ResultTxt);
+			
+			if (!"".equals(vueRenderContent)) {
+
+				addVue3ImportContent("vue", "h");// 导入h
+				
+				addVue3ImportContent("vue", "resolveComponent");// 导入resolveComponent
+				
+				dataResultList.add(TxtContentUtil.reNameVariable(vueComponentName));
+				
+				tempText = VueProcessUtil.getRenderAllContentFunction(vue2ResultTxt);
+				
+				vueComponentContent = tempText;
+			}
 		}
 		
 		// 1. 没得到options api ，则无需处理api的解析
@@ -283,7 +380,6 @@ public class Vue2ToVue3Process {
 		
 		methodResultMap = new HashMap<>();
 		propsResultMap = new HashMap<>();
-		dataResultList = new ArrayList<String>();
 		
 		// 获取props整个信息
 		if (optionsConfigText.indexOf("props:") > -1) {
@@ -429,6 +525,11 @@ public class Vue2ToVue3Process {
 			setUpContentText = "setup(props) {\n" + selfPropDefineInfo;
 		}
 		
+		if (!"".equals(vueRenderContent)) {
+			
+			setUpContentText += "const " + TxtContentUtil.reNameVariable(vueComponentName) + " = resolveComponent(\"" + vueComponentName + "\");\n";
+		}
+		
 		// 拼接上自定义的props 部分信息
 		if (!"".equals(selfDefinePropsValue)) {
 			
@@ -449,6 +550,12 @@ public class Vue2ToVue3Process {
 		optionsConfigTextBak = optionsConfigTextBak.replace(optionsConfigTextBak, optionsConfigText);
 		
 		changeResultTxt = "export default " + optionsConfigTextBak;
+		
+		if (!"".equals(vueComponentContent)) {
+			
+			changeResultTxt = TxtContentUtil.deleteFirstComma(changeResultTxt, changeResultTxt.indexOf(vueComponentContent) + vueComponentContent.length());// 删除末尾的逗号
+			changeResultTxt = changeResultTxt.replace(vueComponentContent, "");
+		}
 		
 		fileContent = fileContent.replace(vue2ResultTxt, changeResultTxt);
 		
@@ -885,11 +992,18 @@ public class Vue2ToVue3Process {
 					
 					startInex = fileContent.indexOf("<script");
 					
-					tempText = fileContent.substring(startInex, fileContent.length());
-					
-					startInex += tempText.indexOf('>') + 1;
-					
-					fileContent = fileContent.substring(0, startInex) + "\n" + vue3ParsePartImportContent + "\n" + fileContent.substring(startInex, fileContent.length());
+					if (startInex == -1) {
+						
+						fileContent = vue3ParsePartImportContent + "\n" + fileContent;
+						
+					} else {
+						
+						tempText = fileContent.substring(startInex, fileContent.length());
+						
+						startInex += tempText.indexOf('>') + 1;
+						
+						fileContent = fileContent.substring(0, startInex) + "\n" + vue3ParsePartImportContent + "\n" + fileContent.substring(startInex, fileContent.length());
+					}
 				} else {
 					
 					fileContent = vue3ParsePartImportContent + "\n" + fileContent;
@@ -936,7 +1050,7 @@ public class Vue2ToVue3Process {
 				
 				startInex = fileContent.lastIndexOf("import ") + TxtContentUtil.getStatementEndIndex(tempText, 0);
 				
-				fileContent = fileContent.substring(0, startInex) + "\n\n" + vue3ParsePartDefineContent + "\n\n" + fileContent.substring(startInex, fileContent.length());
+				fileContent = fileContent.substring(0, startInex + 1) + "\n\n" + vue3ParsePartDefineContent + "\n\n" + fileContent.substring(startInex + 1, fileContent.length());
 				
 			}
 		}
@@ -963,7 +1077,7 @@ public class Vue2ToVue3Process {
 			
 			temp = ConvertParam.Vue2ToVue3PropertyList[i];
 			
-			if (temp.indexOf(ConvertParam.IMPORT_STRING) > -1) {
+			if (temp.indexOf(ConvertParam.CONVERT_STRING) > -1) {
 				
 				vue2property = temp.substring(0, temp.indexOf(ConvertParam.CONVERT_STRING));
 				
@@ -979,6 +1093,12 @@ public class Vue2ToVue3Process {
 		
 		// 3. .sync 的部分并将其替换为 v-model
 		fileContent = VueProcessUtil.replaceSyncPropsToVmodel(fileContent);
+		
+		// 4. template v-for 的子内容的key 绑定到template 上
+		fileContent = VueProcessUtil.changeTemplateKeyBindObject(fileContent);
+		
+		// 5. 删除 .native 修饰符的所有实例，子组件的选项中需设置 inheritAttrs: false
+		
 		
 		return fileContent;
 	}

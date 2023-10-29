@@ -247,11 +247,11 @@ public class ConvertPanel extends JFrame {
 			
 			if (fileTypeIndex == 1) {
 				
-				System.out.println("开始拷贝文件");
+				System.out.println("******************开始拷贝文件******************");
 				
 				FileOperationUtil.copySourceFileList(copyFileList, selectedFileDir, outPutFileDir);// 拷贝文件内容并显示转换结果信息
 				
-				System.out.println("文件拷贝完成");
+				System.out.println("******************文件拷贝完成******************");
 				
 				showResult = "<html><body>";
 				
