@@ -32,7 +32,7 @@ public class ConvertPanel extends JFrame {
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	private static Object[] convertTypeList = {"---请选择---", "vue2升级为vue3", "react类组件升级为函数组件", "vue2迭代为react函数组件", "react类组件迭代为vue3"};
+	private static Object[] convertTypeList = {"---请选择---", "vue2升级vue3", "react类组件升级为函数组件", "vue2迭代为react函数组件", "react类组件迭代为vue3"};
 	
 	private static Object[] fileTypeList = {"文件", "文件夹"};
 	

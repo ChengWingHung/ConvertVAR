@@ -232,18 +232,39 @@ public class TxtContentUtil {
 	}
 	
 	/**
+	 * 得到符合变量命名位置的索引
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static int getVariableStartIndex(String sourceText, int startIndex) {
+		
+		int index = -1;
+		
+		for (int i = startIndex;i < sourceText.length();i++) {
+			
+			if (String.valueOf(sourceText.charAt(i)).matches(ConvertParam.JS_VARIABLE_REG)) {
+				index = i;
+				break;
+			}
+		}
+		
+		return index;
+	}
+	
+	/**
 	 * 得到不是变量命名位置的索引
 	 * 
 	 * @param sourceText
 	 * @return
 	 */
-	public static int getNotVariableIndex(String sourceText) {
+	public static int getNotVariableIndex(String sourceText, int startIndex) {
 		
 		int index = -1;
 		
-		for (int i = 0;i < sourceText.length();i++) {
+		for (int i = startIndex;i < sourceText.length();i++) {
 			
-			if (!String.valueOf(sourceText.charAt(0)).matches(ConvertParam.JS_VARIABLE_REG)) {
+			if (!String.valueOf(sourceText.charAt(i)).matches(ConvertParam.JS_VARIABLE_REG)) {
 				index = i;
 				break;
 			}
@@ -296,19 +317,17 @@ public class TxtContentUtil {
 						sourceText = tempText + sourceText.substring(sourceText.indexOf("<script"), sourceText.length());
 					}
 					
-					tempText = sourceText.substring(sourceText.indexOf("</script"), sourceText.length());
+					tempText = sourceText.substring(sourceText.indexOf("<script"), sourceText.indexOf("</script"));
+						
+					tempText = tempText.substring(tempText.indexOf('>') + 1, tempText.length());
 					
-					endIndex = tempText.indexOf('>');
-					
-					tempText = sourceText.substring(sourceText.indexOf("<script"), sourceText.indexOf("</script") + endIndex + 1);
-							
 					resultContent = tempText;
 					
 					tempText = clearLineStartBlankContent(tempText);
 					
 					tempText = processJSContentFormat(tempText, 4);
 					
-					sourceText = sourceText.replace(resultContent, tempText);
+					sourceText = sourceText.replace(resultContent, tempText + "\n");
 					
 				} else {
 					
@@ -434,6 +453,24 @@ public class TxtContentUtil {
 		}
 		
 		return variableName;
+	}
+	
+	/**
+	 * 获取字符串信息开始的索引
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static int getStringStartIndex(String sourceText, String tagName) {
+		
+		int startIndex = 0;
+		
+		if (sourceText.indexOf(tagName) > -1 && "".equals(sourceText.substring(0, sourceText.indexOf(tagName)))) {
+			
+			startIndex = sourceText.indexOf(tagName);
+		}
+		
+		return startIndex;
 	}
 	
 	/**

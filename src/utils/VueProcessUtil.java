@@ -93,7 +93,7 @@ public class VueProcessUtil {
 				dataName = sourceText.substring(0, sourceText.indexOf(':'));
 			} else if (!"".equals(sourceText)){
 				
-				endIndex = TxtContentUtil.getNotVariableIndex(sourceText);
+				endIndex = TxtContentUtil.getNotVariableIndex(sourceText, 0);
 				dataName = sourceText.substring(0, endIndex == -1?sourceText.length():endIndex);
 			}
 			
@@ -431,6 +431,185 @@ public class VueProcessUtil {
 		}
 		
 		return vueRenderContent;
+	}
+	
+	/**
+	 * 获取option api 中的属性及其索引位置
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static void getPropertyOfOptionsApi(String sourceText, Map<String, Map<String, String>> optionApiPropMap, int findIndex) {
+		
+		String tempText = "";
+		String apiName = "";
+		String apiNameEndChar = "";
+		String apiNextContent = "";
+		String apiDescription = "";
+		
+		int startIndex = 0;
+		int endIndex = -1;
+		
+		startIndex = TxtContentUtil.getStringStartIndex(sourceText, "/**");
+		
+		findIndex += startIndex;
+		
+		sourceText = sourceText.substring(startIndex, sourceText.length());
+		
+		startIndex = TxtContentUtil.getStringStartIndex(sourceText, "//");
+		
+		findIndex += startIndex;
+		
+		sourceText = sourceText.substring(startIndex, sourceText.length());
+		
+		// 先获取注释信息
+		apiDescription = TxtContentUtil.getCommentInformation(sourceText);
+		
+		findIndex += apiDescription.length();
+		
+		// 还有注释信息，继续清除
+		if (sourceText.indexOf("/**") == 0 || sourceText.indexOf("//") == 0) {
+			getPropertyOfOptionsApi(sourceText, optionApiPropMap, findIndex);
+			return;
+		}
+		
+		// 找到第一个符合变量定义规则的索引
+		startIndex = TxtContentUtil.getVariableStartIndex(sourceText, 0);
+		
+		startIndex = startIndex == -1?0:startIndex;
+		
+		// 无逗号，只有一个字段
+		if (sourceText.indexOf(',') < 0) {
+			
+			if (sourceText.indexOf(':') > -1) {
+				
+				apiNameEndChar = ":";// 冒号
+				
+				apiName = sourceText.substring(startIndex, sourceText.indexOf(':'));
+			} else if (sourceText.indexOf('(') > -1) {
+				
+				apiNameEndChar = sourceText.substring(sourceText.indexOf('('), sourceText.indexOf(')'));// 括号
+				
+				apiName = sourceText.substring(startIndex, sourceText.indexOf('('));
+			}
+			
+			if (!"".equals(apiName.trim())) {
+				
+				findIndex += sourceText.indexOf(apiName);
+				
+				Map<String, String> apiDataMap = new HashMap<>();
+				
+				apiDataMap.put("apiName", apiName);
+				apiDataMap.put("apiNameIndex", String.valueOf(findIndex));
+				apiDataMap.put("apiNameEndChar", apiNameEndChar);
+				
+				optionApiPropMap.put(apiName.trim(), apiDataMap);
+			}
+			
+		} else {
+			
+			endIndex = TxtContentUtil.getNotVariableIndex(sourceText, startIndex);
+			
+			tempText = sourceText.substring(endIndex == -1?0:endIndex, sourceText.length()).trim();
+			
+			char charTypeValue = tempText.charAt(0);
+			
+			if (' ' != charTypeValue) {
+				
+				apiName = sourceText.substring(startIndex, sourceText.indexOf(charTypeValue));
+				
+				if (':' == charTypeValue) {
+					
+					apiNameEndChar = ":";
+					
+					//值部分判断 ' " [ ` { 字符包裹的情况
+					tempText = sourceText.substring(sourceText.indexOf(charTypeValue) + 1, sourceText.length());
+					
+					char startChar = tempText.trim().charAt(0);
+					
+					if ("'\"[`{".indexOf(startChar) > -1) {
+						
+						char endChar = startChar;
+						
+						if ('[' == startChar) {
+							endChar = ']';
+						} else if ('{' == startChar) {
+							endChar = '}';
+						}
+						
+						endIndex = sourceText.indexOf(charTypeValue) + 1 + TxtContentUtil.getTagEndIndex(tempText, startChar, endChar) + 1;
+						
+					} else {
+						
+						endIndex = sourceText.indexOf(',');
+					}
+					
+				} else {
+					
+					apiNameEndChar = sourceText.substring(sourceText.indexOf('('), sourceText.indexOf(')'));
+					
+					tempText = sourceText.substring(sourceText.indexOf(")") + 1, sourceText.length());
+					
+					endIndex = sourceText.indexOf(")") + 1 + TxtContentUtil.getTagEndIndex(tempText, '{', '}') + 1;
+				}
+				
+				startIndex = findIndex + sourceText.indexOf(apiName);
+				
+				Map<String, String> apiDataMap = new HashMap<>();
+				
+				apiDataMap.put("apiName", apiName);
+				apiDataMap.put("apiNameIndex", String.valueOf(startIndex));
+				apiDataMap.put("apiNameEndChar", apiNameEndChar);
+				
+				optionApiPropMap.put(apiName.trim(), apiDataMap);
+				
+				findIndex += endIndex;
+						
+				apiNextContent = sourceText.substring(endIndex, sourceText.length());
+				
+			} else {
+				
+				apiName = sourceText.substring(startIndex, sourceText.indexOf(','));
+				
+				findIndex += apiName.length();
+				
+				Map<String, String> apiDataMap = new HashMap<>();
+				
+				apiDataMap.put("apiName", apiName);
+				apiDataMap.put("apiNameIndex", String.valueOf(startIndex));
+				apiDataMap.put("apiNameEndChar", "");
+				
+				optionApiPropMap.put(apiName.trim(), apiDataMap);
+				
+				apiNextContent = sourceText.substring(sourceText.indexOf(',') + 1, sourceText.length());
+			}
+			
+			tempText = apiNextContent.trim();
+			
+			if (tempText.length() > 0) {
+				
+				startIndex = -1;
+				
+				// 去除首个字符为逗号
+				if (',' == tempText.charAt(0)) {
+					
+					for (int i=0;i<apiNextContent.length();i++) {
+						
+						if (',' == apiNextContent.charAt(i)) {
+							startIndex = i;
+							break;
+						}
+					}
+					
+					findIndex += startIndex + 1;
+				}
+				
+				tempText = apiNextContent.substring(startIndex + 1, apiNextContent.length());
+				
+				getPropertyOfOptionsApi(tempText, optionApiPropMap, findIndex);
+			}
+		}
+		
 	}
 	
 	/**
