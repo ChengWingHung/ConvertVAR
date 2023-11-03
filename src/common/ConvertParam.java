@@ -10,7 +10,7 @@ public class ConvertParam {
 	public static String TOOL_NAME = "ConvertVAR";
 		
 	// 版本号信息
-	public static String TOOL_VERSION = "1.0.0";
+	public static String TOOL_VERSION = "1.0.0 Beta";
 	
 	// 本地测试输出文件夹
 	public static String LOCAL_TEST_OUTPUT_FILE_PATH = "Documents/测试数据/";
@@ -33,7 +33,7 @@ public class ConvertParam {
 	// 定义变量命名规则
 	public static String JS_VARIABLE_REG = "^[A-Za-z0-9_\\$]";
 	
-	// Vue2ToVue3 option api -> setup 方法
+	// Vue2ToVue3 option api function part -> setup 方法
 	public static String[] Vue2ToVue3SetUpMethodList = {
 			"filters", "computed", "watch", "methods"
 	};
@@ -57,7 +57,9 @@ public class ConvertParam {
 	
 	// Vue2ToVue3 属性转换对照
 	public static String[] Vue2ToVue3PropertyList = {
-			"v-bind=\"@->v-bind=\"","v-on:->@"
+			"inline-template",
+			"v-bind=\"@->v-bind=\"","v-on:->@",
+			"this.$scopedSlots->this.$slots","slot-scope->v-slot"
 	};
 	
 	// Vue2ToVue3 路由转换对照
@@ -66,5 +68,19 @@ public class ConvertParam {
 			"store.subscribe->store.watch"
 	};
 	
+	// Vue2ToVue3 需要移除的实例
+	public static String[] clearVue2InstanceList = {
+			"$children->$refs", // $children 实例，如果需要访问子组件实例可用 $refs
+			"$destroy" // 移除 $destroy 实例，不应该手动管理单个 Vue 组件的生命周期
+	};
+	
+	// Vue2ToVue3 键盘码值转换为修饰符
+	public static String[] keyCodeToKecharList = {
+			"8->backspace","9->tab","12->clear","13->enter","16->shift",
+			"17->control","18->alt","20->capelock","27->esc","32->spacebar",
+			"33->pageup","34->pagedown","35->end","36->home","37->left",
+			"38->up","39->right","40->down","45->insert","46->delete",
+			"144->numlock"
+	};
 	
 }

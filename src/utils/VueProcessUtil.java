@@ -152,7 +152,10 @@ public class VueProcessUtil {
 	}
 	
 	/**
-	 * vue2 替换setup 中的 this.
+	 * vue2 替换setup 中的 this.  setup 中无this
+	 * 
+	 * 1 props 和 state 中的把 this. 替换为 props. 或 state.
+	 * 2 method 中的 this. 直接去除
 	 * 
 	 * @param sourceText
 	 * @param thisKeyWord this标志
@@ -434,15 +437,16 @@ public class VueProcessUtil {
 	}
 	
 	/**
-	 * 获取option api 中的属性及其索引位置
+	 * 获取对象属性及其所有信息
 	 * 
 	 * @param sourceText
 	 * @return
 	 */
-	public static void getPropertyOfOptionsApi(String sourceText, Map<String, Map<String, String>> optionApiPropMap, int findIndex) {
+	public static void getPropertyDetailOfObject(String sourceText, Map<String, Map<String, String>> recordPropertyMap, int findIndex) {
 		
 		String tempText = "";
 		String apiName = "";
+		String apiNameValue = "";
 		String apiNameEndChar = "";
 		String apiNextContent = "";
 		String apiDescription = "";
@@ -469,7 +473,7 @@ public class VueProcessUtil {
 		
 		// 还有注释信息，继续清除
 		if (sourceText.indexOf("/**") == 0 || sourceText.indexOf("//") == 0) {
-			getPropertyOfOptionsApi(sourceText, optionApiPropMap, findIndex);
+			getPropertyDetailOfObject(sourceText, recordPropertyMap, findIndex);
 			return;
 		}
 		
@@ -486,6 +490,14 @@ public class VueProcessUtil {
 				apiNameEndChar = ":";// 冒号
 				
 				apiName = sourceText.substring(startIndex, sourceText.indexOf(':'));
+				
+				if ("el".equals(apiName)) {
+					
+					apiNameValue = sourceText.substring(sourceText.indexOf(':') + 1, sourceText.length()).trim();
+					
+					if ("'\"".indexOf(apiNameValue.charAt(0)) > -1) apiNameValue = apiNameValue.substring(1, apiNameValue.length() - 1);
+				}
+				
 			} else if (sourceText.indexOf('(') > -1) {
 				
 				apiNameEndChar = sourceText.substring(sourceText.indexOf('('), sourceText.indexOf(')'));// 括号
@@ -500,10 +512,11 @@ public class VueProcessUtil {
 				Map<String, String> apiDataMap = new HashMap<>();
 				
 				apiDataMap.put("apiName", apiName);
+				apiDataMap.put("apiNameValue", apiNameValue);
 				apiDataMap.put("apiNameIndex", String.valueOf(findIndex));
 				apiDataMap.put("apiNameEndChar", apiNameEndChar);
 				
-				optionApiPropMap.put(apiName.trim(), apiDataMap);
+				recordPropertyMap.put(apiName.trim(), apiDataMap);
 			}
 			
 		} else {
@@ -539,6 +552,16 @@ public class VueProcessUtil {
 						
 						endIndex = sourceText.indexOf(charTypeValue) + 1 + TxtContentUtil.getTagEndIndex(tempText, startChar, endChar) + 1;
 						
+						if ("el".equals(apiName)) {
+							
+							apiNameValue = tempText.trim();
+							
+							apiNameValue = apiNameValue.substring(1, apiNameValue.length());
+							
+							apiNameValue = apiNameValue.substring(0, apiNameValue.indexOf(endChar));
+							
+						}
+						
 					} else {
 						
 						endIndex = sourceText.indexOf(',');
@@ -558,10 +581,11 @@ public class VueProcessUtil {
 				Map<String, String> apiDataMap = new HashMap<>();
 				
 				apiDataMap.put("apiName", apiName);
+				apiDataMap.put("apiNameValue", apiNameValue);
 				apiDataMap.put("apiNameIndex", String.valueOf(startIndex));
 				apiDataMap.put("apiNameEndChar", apiNameEndChar);
 				
-				optionApiPropMap.put(apiName.trim(), apiDataMap);
+				recordPropertyMap.put(apiName.trim(), apiDataMap);
 				
 				findIndex += endIndex;
 						
@@ -576,10 +600,11 @@ public class VueProcessUtil {
 				Map<String, String> apiDataMap = new HashMap<>();
 				
 				apiDataMap.put("apiName", apiName);
-				apiDataMap.put("apiNameIndex", String.valueOf(startIndex));
+				apiDataMap.put("apiNameValue", apiNameValue);
 				apiDataMap.put("apiNameEndChar", "");
+				apiDataMap.put("apiNameIndex", String.valueOf(startIndex));
 				
-				optionApiPropMap.put(apiName.trim(), apiDataMap);
+				recordPropertyMap.put(apiName.trim(), apiDataMap);
 				
 				apiNextContent = sourceText.substring(sourceText.indexOf(',') + 1, sourceText.length());
 			}
@@ -606,23 +631,210 @@ public class VueProcessUtil {
 				
 				tempText = apiNextContent.substring(startIndex + 1, apiNextContent.length());
 				
-				getPropertyOfOptionsApi(tempText, optionApiPropMap, findIndex);
+				getPropertyDetailOfObject(tempText, recordPropertyMap, findIndex);
 			}
 		}
 		
 	}
 	
 	/**
-	 * 删除 .native 修饰符的所有实例
+	 * 组件属性转换
+	 * 
+	 * @param fileContent
+	 * @return
+	 */
+	public static String changeComponentPropertys(String fileContent, Map<String, Map> parseResultMap) {
+		
+		// 1 v-bind="@xxx" -> v-bind="xxx"
+		// 2 v-on: -> @
+		
+		String temp = "";
+		String vue2property = "";// vue2对应的属性
+		String vue3property = "";// vue3对应的属性
+		
+		for (int i=0;i<ConvertParam.Vue2ToVue3PropertyList.length;i++) {
+			
+			temp = ConvertParam.Vue2ToVue3PropertyList[i];
+			
+			if (temp.indexOf(ConvertParam.CONVERT_STRING) > -1) {
+				
+				vue2property = temp.substring(0, temp.indexOf(ConvertParam.CONVERT_STRING));
+				
+				vue3property = temp.substring(temp.indexOf(ConvertParam.CONVERT_STRING) + 2, temp.length());
+				
+				if (fileContent.indexOf(vue2property) > -1) {
+					
+					fileContent = fileContent.replaceAll(vue2property, vue3property);
+				}
+			}
+			
+		}
+		
+		// 3. .sync 的部分并将其替换为 v-model
+		fileContent = replaceSyncPropsToVmodel(fileContent);
+		
+		// 4. template v-for 的子内容的key 绑定到template 上
+		fileContent = changeTemplateKeyBindObject(fileContent);
+		
+		// 5. 删除 .native 修饰符的所有实例，子组件的选项中需设置 inheritAttrs: false
+		fileContent = clearOnEventWithNativeKeyWord(fileContent);
+		
+		// 6. 键盘码值转换为修饰符
+		fileContent = replaceKeyCodeWithKeyString(fileContent);
+		
+		// 7. 需要移除和替换的实例
+		fileContent = removeUnUseInstanceInVue3(fileContent, parseResultMap);
+		
+		
+		return fileContent;
+	}
+	
+	/**
+	 * 删除 .native 修饰符的所有实例，子组件需添加emits，否则会导致触发两次，本方法只去除 .native 修饰符
 	 * 
 	 * @param sourceText
 	 * @return
 	 */
 	public static String clearOnEventWithNativeKeyWord(String sourceText) {
 		
+		if (sourceText.indexOf(".native ") > -1){
+			
+			sourceText = sourceText.replaceAll(".native ", "");
+		}
 		
 		return sourceText;
 	}
 	
+	/**
+	 * 处理vue2 中使用键码改为 vue3 中采用修饰符
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String replaceKeyCodeWithKeyString(String sourceText) {
+		
+		String temp = "";
+		String keyCodeValue = "";// 键码
+		String keyStringValue = "";// 修饰符
+		
+		for(String instanceValue:ConvertParam.keyCodeToKecharList)
+        {
+			
+			keyCodeValue = instanceValue.substring(0, instanceValue.indexOf(ConvertParam.CONVERT_STRING));
+			
+			keyStringValue = instanceValue.substring(instanceValue.indexOf(ConvertParam.CONVERT_STRING) + 2, instanceValue.length());
+			
+			temp = "." + keyCodeValue + "=";
+			
+			if (sourceText.indexOf(temp) > -1) {
+				
+				sourceText = sourceText.replaceAll(temp, "." + keyStringValue + "=");
+			}
+        }
+		
+		return sourceText;
+	}
+	
+	/**
+	 * 处理vue3 中移除的实例
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String removeUnUseInstanceInVue3(String sourceText, Map<String, Map> parseResultMap) {
+		
+		String temp = "";
+		String vue2InstanceContent = "";// vue2对应的实例内容
+		String vue3InstanceContent = "";// vue3对应的实例内容
+
+		int endIndex = -1;// 获取截取结束位置
+		
+		for(String instanceContentValue:ConvertParam.clearVue2InstanceList)
+        {
+			// 无箭头的直接移除
+			if (instanceContentValue.indexOf(ConvertParam.CONVERT_STRING) > -1) {
+				
+				vue2InstanceContent = instanceContentValue.substring(0, instanceContentValue.indexOf(ConvertParam.CONVERT_STRING));
+				
+				vue3InstanceContent = instanceContentValue.substring(instanceContentValue.indexOf(ConvertParam.CONVERT_STRING) + 2, instanceContentValue.length());
+			} else {
+				
+				vue2InstanceContent = instanceContentValue;
+				
+				vue3InstanceContent = "";
+			}
+			
+			// 判断文件内容中是否有对应实例内容
+			if (sourceText.indexOf(vue2InstanceContent) > -1) {
+				
+				// 清除无需转换的内容
+				if ("".equals(vue3InstanceContent)) {
+					
+					if (parseResultMap.containsKey("originDefine")) {
+						
+						Map<String, String> instanceMap = parseResultMap.get("originDefine");
+						
+						temp = instanceMap.get("newVue");
+						
+						temp = temp + "." + vue2InstanceContent;
+						
+						vue2InstanceContent = sourceText.substring(sourceText.indexOf(temp), sourceText.length());
+						
+						endIndex = TxtContentUtil.getStatementEndIndex(vue2InstanceContent, 0);
+						
+						vue2InstanceContent = vue2InstanceContent.substring(0, endIndex + 1);
+						
+						sourceText = sourceText.replace(vue2InstanceContent, "");// 直接置空
+					}
+					
+				} else {
+					
+					sourceText = sourceText.replaceAll(vue2InstanceContent, vue3InstanceContent);// 直接替换
+				}
+				
+			}
+			
+        }
+		
+		return sourceText;
+	}
+	
+	/**
+	 * 处理vue2 this.$set() / this.$delete
+	 * 
+	 * 1. this.$set() => console.log("state data changed")
+	 * 2. this.$delete  => console.log("state data changed")
+	 * 
+	 * @param methodBodyContent
+	 * @return
+	 */
+	public static String removeVue2BindObjectInfoChangeProcess(String methodBodyContent, String processType) {
+		
+		String temp = "";
+		String processTemp = "";
+		String replaceTxt = "console.log('" + processType + " state data changed')";
+		String vue2ProcessContent = "";// vue2对应的操作信息
+
+		int endIndex = -1;// 获取截取结束位置
+		
+		processTemp = "this.$" + processType + "(";
+		
+		if (methodBodyContent.indexOf(processTemp) > -1) {
+			
+			temp = methodBodyContent.substring(methodBodyContent.indexOf(processTemp), methodBodyContent.length());
+			
+			endIndex = TxtContentUtil.getTagEndIndex(temp, '(', ')') + 1;
+			
+			vue2ProcessContent = temp.substring(0, endIndex);
+			
+			endIndex += methodBodyContent.indexOf(processTemp);
+			
+			temp = methodBodyContent.substring(0, endIndex);
+			
+			return temp.replace(vue2ProcessContent, replaceTxt) + removeVue2BindObjectInfoChangeProcess(methodBodyContent.substring(endIndex, methodBodyContent.length()), processType);
+		}
+		
+		return methodBodyContent;
+	}
 	
 }

@@ -1,9 +1,5 @@
 package utils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-
 import common.ConvertParam;
 
 public class TxtContentUtil {
@@ -286,8 +282,6 @@ public class TxtContentUtil {
 		String tempText = "";
 		String resultContent = "";
 		
-		int endIndex = -1;
-		
 		if ("vue".equals(framworkName)) {
 			
 			if ("js".equals(fileType)) {
@@ -437,7 +431,7 @@ public class TxtContentUtil {
 	}
 	
 	/**
-	 * 按命名规则重命名变量
+	 * 按命名规则重命名变量，不符合部分直接剔除
 	 * 
 	 * @param variableName 变量名
 	 * @return
