@@ -241,6 +241,8 @@ public class ConvertPanel extends JFrame {
 		// 判断是否解析完毕
 		if (fileIndex == processFileList.size()) {
 			
+			// 此处后续可以考虑优化为全部解析完成后再生成文件，如果需要在解析某个文件中间过程中去增加其他文件的信息时
+			
 			System.out.println("所有文件解析完成");
 			
 			String showResult = "<html><body>";

@@ -20,18 +20,26 @@ public class VueProcessUtil {
 	 * @param sourceText
 	 * @return
 	 */
-	public static void processVuePropsInfo(String sourceText, Map<String, Map<String, String>> propsResultMap) {
+	public static void processVuePropsInfo(String sourceText, Map<String, Map<String, String>> propsResultMap, String propDescription) {
 		
 		String tempText = "";
 		String propName = "";
 		String propDefineValue = "";
 		String propContent = "";
-		String propDescription = "";
 		
+		tempText = propDescription;
 		// 先获取注释信息
 		propDescription = TxtContentUtil.getCommentInformation(sourceText);
 		
 		sourceText = sourceText.substring(sourceText.indexOf(propDescription) + propDescription.length(), sourceText.length()).trim();
+		
+		if (!"".equals(tempText)) propDescription += "\n" + tempText;
+		
+		// 还有注释信息，继续清除
+		if (sourceText.indexOf("/**") == 0 || sourceText.indexOf("//") == 0) {
+			processVuePropsInfo(sourceText, propsResultMap, propDescription);
+			return;
+		}
 		
 		propName = sourceText.substring(0, sourceText.indexOf(':'));
 		
@@ -54,7 +62,7 @@ public class VueProcessUtil {
 			// 去除首个字符为逗号
 			if (',' == sourceText.charAt(0)) sourceText = sourceText.substring(1, sourceText.length());
 			
-			processVuePropsInfo(sourceText.trim(), propsResultMap);
+			processVuePropsInfo(sourceText.trim(), propsResultMap, "");
 		}
 	}
 	
@@ -172,19 +180,29 @@ public class VueProcessUtil {
 		
 		if (currentMethodTxt.indexOf(thisKeyWord + KeyWord) > -1) {
 			
-			tempTxt = currentMethodTxt.substring(currentMethodTxt.indexOf(thisKeyWord + KeyWord) + (thisKeyWord + KeyWord).length(), currentMethodTxt.length()).trim();
+			tempTxt = currentMethodTxt.substring(0, currentMethodTxt.indexOf(thisKeyWord + KeyWord));
 			
-			// 说明不可以替换
-			if (String.valueOf(tempTxt.charAt(0)).matches(ConvertParam.JS_VARIABLE_REG)) {
+			// 如果前一个字符也是符合变量定义，则说明不是
+			if (String.valueOf(tempTxt.charAt(tempTxt.length() - 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
 				
 				startIndex = currentMethodTxt.indexOf(thisKeyWord + KeyWord) + (thisKeyWord + KeyWord).length();
 				
 			} else {
 				
-				currentMethodTxt = currentMethodTxt.replace(thisKeyWord + KeyWord, wordType + KeyWord);
+				tempTxt = currentMethodTxt.substring(currentMethodTxt.indexOf(thisKeyWord + KeyWord) + (thisKeyWord + KeyWord).length(), currentMethodTxt.length());
 				
-				startIndex = currentMethodTxt.indexOf(wordType + KeyWord) + (wordType + KeyWord).length();
-				
+				// 说明不可以替换
+				if ('(' != KeyWord.charAt(KeyWord.length() - 1) && String.valueOf(tempTxt.charAt(0)).matches(ConvertParam.JS_VARIABLE_REG)) {
+					
+					startIndex = currentMethodTxt.indexOf(thisKeyWord + KeyWord) + (thisKeyWord + KeyWord).length();
+					
+				} else {
+					
+					currentMethodTxt = currentMethodTxt.replace(thisKeyWord + KeyWord, wordType + KeyWord);
+					
+					startIndex = currentMethodTxt.indexOf(wordType + KeyWord) + (wordType + KeyWord).length();
+					
+				}
 			}
 			
 			return currentMethodTxt.substring(0, startIndex) + replaceThisOfVue2Method(currentMethodTxt.substring(startIndex, currentMethodTxt.length()), thisKeyWord, KeyWord, wordType);
@@ -685,7 +703,6 @@ public class VueProcessUtil {
 		// 7. 需要移除和替换的实例
 		fileContent = removeUnUseInstanceInVue3(fileContent, parseResultMap);
 		
-		
 		return fileContent;
 	}
 	
@@ -836,5 +853,7 @@ public class VueProcessUtil {
 		
 		return methodBodyContent;
 	}
+	
+	
 	
 }
