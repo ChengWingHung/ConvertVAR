@@ -30,6 +30,9 @@ public class ConvertParam {
 	// 定义新的变量标志
 	public static char DEFINE_STRING = '^';
 	
+	// 需要记录值的key
+	public static String RECORD_PROPERTY_NAME = "el,render";
+	
 	// 定义变量命名规则
 	public static String JS_VARIABLE_REG = "^[A-Za-z0-9_\\$]";
 	

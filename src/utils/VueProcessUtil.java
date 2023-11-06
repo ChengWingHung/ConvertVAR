@@ -72,10 +72,11 @@ public class VueProcessUtil {
 	 * @param sourceText
 	 * @return
 	 */
-	public static void processVueDataInfo(String sourceText, ArrayList<String> dataResultList) {
+	public static void processVueDataInfo(String sourceText, Map<String, String> stateDataResultMap) {
 		
 		String tempText = "";
 		String dataName = "";
+		String dataContent = "";
 		String dataNextContent = "";
 		String dataDescription = "";
 		
@@ -88,7 +89,7 @@ public class VueProcessUtil {
 		
 		// 还有注释信息，继续清除
 		if (sourceText.indexOf("/**") == 0 || sourceText.indexOf("//") == 0) {
-			processVueDataInfo(sourceText, dataResultList);
+			processVueDataInfo(sourceText, stateDataResultMap);
 			return;
 		}
 		
@@ -99,14 +100,26 @@ public class VueProcessUtil {
 			if (sourceText.indexOf(':') > -1) {
 				
 				dataName = sourceText.substring(0, sourceText.indexOf(':'));
+				
 			} else if (!"".equals(sourceText)){
 				
 				endIndex = TxtContentUtil.getNotVariableIndex(sourceText, 0);
+				
 				dataName = sourceText.substring(0, endIndex == -1?sourceText.length():endIndex);
+				
+			}
+			
+			dataContent = sourceText.trim();
+			
+			// 末尾存在备注信息，在备注信息前加逗号
+			if (sourceText.indexOf("/**") > -1) {
+				dataContent = dataContent.substring(0, sourceText.indexOf("/**")).trim() + "," + dataContent.substring(sourceText.indexOf("/**"), dataContent.length());
+			} else if (sourceText.indexOf("//") > -1) {
+				dataContent = dataContent.substring(0, sourceText.indexOf("//")).trim() + "," + dataContent.substring(sourceText.indexOf("//"), dataContent.length());
 			}
 			
 			if (!"".equals(dataName.trim()))
-				dataResultList.add(dataName.trim());
+				stateDataResultMap.put(dataName.trim(), dataContent);
 			
 		} else {
 			
@@ -135,16 +148,20 @@ public class VueProcessUtil {
 					endIndex = sourceText.indexOf(',');
 				}
 				
+				dataContent = sourceText.substring(0, endIndex);
+				
 				dataNextContent = sourceText.substring(endIndex, sourceText.length());
 			} else {
 				
 				dataName = sourceText.substring(0, sourceText.indexOf(','));
 				
 				dataNextContent = sourceText.substring(sourceText.indexOf(',') + 1, sourceText.length());
+				
+				dataContent = dataName;
 			}
 			
 			if (!"".equals(dataName.trim()))
-				dataResultList.add(dataName.trim());
+				stateDataResultMap.put(dataName.trim(), dataContent);
 			
 			sourceText = dataNextContent.trim();
 			
@@ -153,7 +170,7 @@ public class VueProcessUtil {
 				// 去除首个字符为逗号
 				if (',' == sourceText.charAt(0)) sourceText = sourceText.substring(1, sourceText.length());
 				
-				processVueDataInfo(sourceText.trim(), dataResultList);
+				processVueDataInfo(sourceText.trim(), stateDataResultMap);
 			}
 		}
 		
@@ -509,7 +526,7 @@ public class VueProcessUtil {
 				
 				apiName = sourceText.substring(startIndex, sourceText.indexOf(':'));
 				
-				if ("el".equals(apiName)) {
+				if (ConvertParam.RECORD_PROPERTY_NAME.indexOf(apiName) > -1) {
 					
 					apiNameValue = sourceText.substring(sourceText.indexOf(':') + 1, sourceText.length()).trim();
 					
@@ -570,7 +587,7 @@ public class VueProcessUtil {
 						
 						endIndex = sourceText.indexOf(charTypeValue) + 1 + TxtContentUtil.getTagEndIndex(tempText, startChar, endChar) + 1;
 						
-						if ("el".equals(apiName)) {
+						if (ConvertParam.RECORD_PROPERTY_NAME.indexOf(apiName) > -1) {
 							
 							apiNameValue = tempText.trim();
 							
@@ -584,6 +601,14 @@ public class VueProcessUtil {
 						
 						endIndex = sourceText.indexOf(',');
 					}
+					
+				} else if (',' == charTypeValue) {
+					
+					apiNameValue = "";
+					
+					apiNameEndChar = ",";
+					
+					endIndex = sourceText.indexOf(',');
 					
 				} else {
 					
@@ -854,6 +879,40 @@ public class VueProcessUtil {
 		return methodBodyContent;
 	}
 	
-	
+	/**
+	 * use(xxx) 的处理
+	 * 
+	 * @param newVueOptionContent
+	 * @return
+	 */
+	public static String getNewVueOptionsUseContent(Map<String, Map<String, String>> optionApiPropMap, String newVueOptionContent, String useTypeValue) {
+		
+		String tempText = "";
+		
+		int endIndex = -1;// 获取截取结束位置
+		
+		Map<String, String> vueApiDataMap = optionApiPropMap.get(useTypeValue);
+		
+		tempText = newVueOptionContent.substring(newVueOptionContent.indexOf(useTypeValue), newVueOptionContent.length());
+		
+		// 根据有无apiNameValue 获取对应属性整个信息
+		if ("".equals(vueApiDataMap.get("apiNameValue"))) {
+			
+			tempText = tempText.substring(0, tempText.indexOf(vueApiDataMap.get("apiNameEndChar")));
+		} else {
+			
+			tempText = tempText.substring(0, tempText.indexOf(vueApiDataMap.get("apiNameValue")) + vueApiDataMap.get("apiNameValue").length());
+		}
+		
+		newVueOptionContent = TxtContentUtil.deleteFirstComma(newVueOptionContent, newVueOptionContent.indexOf(tempText) + tempText.length());// 删除末尾的逗号
+		newVueOptionContent = newVueOptionContent.replace(tempText, "");
+		
+		endIndex = TxtContentUtil.getTagEndIndex(newVueOptionContent, '(', ')') + 1;
+		
+		// 执行拼接处理
+		newVueOptionContent = newVueOptionContent.substring(0, endIndex) + ".use(" + useTypeValue + ")" + newVueOptionContent.substring(endIndex, newVueOptionContent.length());
+		
+		return newVueOptionContent;
+	}
 	
 }

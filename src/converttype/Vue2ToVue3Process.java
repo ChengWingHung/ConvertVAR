@@ -40,9 +40,9 @@ public class Vue2ToVue3Process {
 	
 	private static Map<String, Map<String, String>> clearInfoMap;// vue3 中移除的 vue2 信息
 	
-	private static ArrayList<String> dataResultList;// data 信息存储对象
+	private static Map<String, String> stateDataResultMap;// state data 信息存储对象
 	
-	private static String reactiveValue = "";// reactive 信息
+	private static ArrayList<String> setUpReturnResultList;// setup return data 信息
 	
 	private static String selfDefinePropsValue = "";// 自身定义的 props 信息
 	
@@ -280,8 +280,6 @@ public class Vue2ToVue3Process {
 	 */
 	private static String changeOptionApiToCompositionApi(String fileContent) {
 		
-		reactiveValue = "";
-		
 		String tempText = "";// 临时处理字段
 		String vue2ResultTxt = "";// vue2的语句截取结果
 		String changeResultTxt = "";// 转换后的结果
@@ -295,7 +293,7 @@ public class Vue2ToVue3Process {
 		int startInex = -1;// 获取截取初始位置
 		int endIndex = -1;// 获取截取结束位置
 		
-		// Vue.component( 形式，单独处理，前面已替换为 app.component
+		// Vue.component( 形式，单独处理，前面全局api 处已替换为 app.component
 		if (fileContent.indexOf("app.component(") > -1) {
 			
 			startInex = fileContent.indexOf("app.component(");
@@ -391,7 +389,8 @@ public class Vue2ToVue3Process {
 			
 		}
 		
-		dataResultList = new ArrayList<String>();
+		stateDataResultMap = new HashMap<>();
+		setUpReturnResultList = new ArrayList<String>();
 		
 		// export default{} 形式
 		if (fileContent.indexOf("export default ") > -1) {
@@ -426,7 +425,7 @@ public class Vue2ToVue3Process {
 					
 					addVue3ImportContent("vue", "resolveComponent");// 导入resolveComponent
 					
-					dataResultList.add(TxtContentUtil.reNameVariable(vueComponentName));
+					setUpReturnResultList.add(TxtContentUtil.reNameVariable(vueComponentName));
 					
 				}
 				
@@ -543,16 +542,11 @@ public class Vue2ToVue3Process {
 			
 			tempText = tempText.substring(1, tempText.length() - 1).trim();
 			
-			if (!"".equals(tempText)) {
-				
-				addVue3ImportContent("vue", "reactive");
-				
-				reactiveValue += tempText + "\n";
-			}
-			
 			// 获得data信息
-			VueProcessUtil.processVueDataInfo(tempText, dataResultList);
+			VueProcessUtil.processVueDataInfo(tempText, stateDataResultMap);
 			
+			// return state
+			if (stateDataResultMap.size() > 0) setUpReturnResultList.add("state");
 		}
 		
 		if (!"".equals(propResultText)) {
@@ -631,6 +625,28 @@ public class Vue2ToVue3Process {
 		
 		tempText = assembleVue3SetUpApi(getSelfPropsInfo, getParentPropsInfo);// 从得到的methodResultMap等拼接setup信息
 		
+		// 处理state reactive 部分
+		if (stateDataResultMap.size() > 0) {
+			
+			addVue3ImportContent("vue", "reactive");
+			
+			apiTempText = "";
+			
+			for (Map.Entry<String, String> entry : stateDataResultMap.entrySet()) {
+				
+				if (!"".equals(entry.getValue())) {
+					
+					apiTempText += entry.getValue() + ",\n";
+				} else {
+					
+					apiTempText += entry.getKey() + ",\n";
+				}
+				
+			}
+			
+			tempText = "const state = reactive({\n" + apiTempText + "});\n" + tempText;
+		}
+		
 		// 处理setup 中需要增加的定义信息
 		if (parseResultMap.containsKey("setupDefine")) {
 			
@@ -640,14 +656,6 @@ public class Vue2ToVue3Process {
 				
 				tempText = entry.getValue() + "\n" + tempText;
 			}
-		}
-		
-		// 处理state reactive 部分
-		if (!"".equals(reactiveValue)) {
-			
-			reactiveValue = "const state = reactive({\n" + reactiveValue + "});\n";
-			
-			tempText = reactiveValue + tempText;
 		}
 		
 		// emit 事件信息不为空
@@ -684,8 +692,9 @@ public class Vue2ToVue3Process {
 		// new vue => createapp
 		if (isCreateApp) {
 			
-			String elementIdValue = "";
-			String variableVueName = "";
+			String variableVueName = "";// 组件别名
+			String elementIdValue = "";// 组件el id值
+			String elementRenderValue = "";// 组件render 内容
 			
 			if (optionApiPropMap.containsKey("el")) {
 				
@@ -725,7 +734,39 @@ public class Vue2ToVue3Process {
 				changeResultTxt = " createApp" + changeResultTxt.substring(changeResultTxt.indexOf(" Vue(") + " Vue(".length() - 1, changeResultTxt.length());
 			}
 			
-			// 判断
+			// 1. 判断router 信息 => use(router)
+			if (optionApiPropMap.containsKey("router")) {
+				
+				changeResultTxt = VueProcessUtil.getNewVueOptionsUseContent(optionApiPropMap, changeResultTxt, "router");
+			}
+			
+			// 2. 判断store 信息 => use(store)
+			if (optionApiPropMap.containsKey("store")) {
+				
+				changeResultTxt = VueProcessUtil.getNewVueOptionsUseContent(optionApiPropMap, changeResultTxt, "store");
+			}
+			
+			// 3. 判断i18n 信息 => use(i18n)
+			if (optionApiPropMap.containsKey("i18n")) {
+				
+				changeResultTxt = VueProcessUtil.getNewVueOptionsUseContent(optionApiPropMap, changeResultTxt, "i18n");
+			}
+			
+			// 4. 处理render 信息
+			if (optionApiPropMap.containsKey("render")) {
+				
+				tempText = optionApiPropMap.get("render").get("apiNameValue");
+				
+				if (tempText.indexOf(" h(") > -1) {
+					
+					tempText = tempText.substring(tempText.indexOf(" h(") + " h(".length(), tempText.length());
+					
+					elementRenderValue = tempText.substring(0, tempText.lastIndexOf(')'));
+					
+				}
+			}
+			
+			// 5. 判断el 信息
 			if (!"".equals(elementIdValue)) {
 				
 				if (!"".equals(variableVueName) && fileContent.indexOf(variableVueName + ".$mount(") < 0) {
@@ -746,6 +787,15 @@ public class Vue2ToVue3Process {
 				
 				changeResultTxt = TxtContentUtil.deleteFirstComma(changeResultTxt, changeResultTxt.indexOf(tempText) + tempText.length());// 删除末尾的逗号
 				changeResultTxt = changeResultTxt.replace(tempText, "");
+				
+			}
+			
+			// 替换createApp内容
+			if (!"".equals(elementRenderValue)) {
+				
+				endIndex = TxtContentUtil.getTagEndIndex(changeResultTxt, '(', ')');
+				
+				changeResultTxt = changeResultTxt.substring(0, changeResultTxt.indexOf("createApp(") + "createApp(".length()) + elementRenderValue + changeResultTxt.substring(endIndex, changeResultTxt.length());
 			}
 			
 		} else {
@@ -761,7 +811,7 @@ public class Vue2ToVue3Process {
 		
 		fileContent = fileContent.replace(vue2ResultTxt, changeResultTxt);
 		
-		// 还有new Vue 或者Vue.component 的情况
+		// 还有new Vue 的情况，继续处理
 		if (fileContent.indexOf(" Vue(") > -1) {
 			
 			return changeOptionApiToCompositionApi(fileContent);
@@ -1033,14 +1083,14 @@ public class Vue2ToVue3Process {
 					
 					getAllVariableOfMethodUse(methodBodyContent);
 					
-					vue3SetUpResultValue = "watch(" + methodMap.get("methodName") + "(" + methodMap.get("methodParams") + ") => " + methodBodyContent + ");\n";
+					vue3SetUpResultValue = "watch(" + methodMap.get("methodName") + ",(" + methodMap.get("methodParams") + ") => " + methodBodyContent + ");\n";
 					
 					addVue3ImportContent("vue", "watch");
 				} 
 				// computed 函数单独处理
 				else if (entry.getKey().indexOf("computed_") == 0) {
 					
-					dataResultList.add(methodMap.get("methodName"));
+					setUpReturnResultList.add(methodMap.get("methodName"));
 					
 					// set 和 get 方法处理
 					methodBodyContent = processComputedSetOrGetFunc(methodBodyContent, "set");
@@ -1051,7 +1101,7 @@ public class Vue2ToVue3Process {
 					addVue3ImportContent("vue", "computed");
 				} else {
 					
-					dataResultList.add(methodMap.get("methodName"));
+					setUpReturnResultList.add(methodMap.get("methodName"));
 					
 					methodDescription = methodMap.get("methodDescription");
 					
@@ -1068,23 +1118,7 @@ public class Vue2ToVue3Process {
 				tempMethodText = methodBodyContent;
 						
 				// 处理setup方法中的this.
-				tempMethodText = replaceThisOfSetUp(tempMethodText);
-				
-				// 处理setup方法中的路由读取
-				tempMethodText = replaceRouterInfoOfSetUp(tempMethodText);
-				
-				// this.$emit => context.emit in setup
-				tempMethodText = replaceThisEmitWithContext(tempMethodText);
-				
-				// this.$set() 和 this.$delete 为vue2 中解决无法监听复杂数据类型属性新增删除
-				tempMethodText = VueProcessUtil.removeVue2BindObjectInfoChangeProcess(tempMethodText, "set");
-				tempMethodText = VueProcessUtil.removeVue2BindObjectInfoChangeProcess(tempMethodText, "delete");
-				
-				// this.$message => Message
-				tempMethodText = replaceThisMessageWithElMessage(tempMethodText, false);
-				
-				// this.$refs => ref
-				tempMethodText = replaceRefInfoGetMethod(tempMethodText);
+				tempMethodText = replaceThisKeyWordOfSetUp(tempMethodText);
 				
 				vue3SetUpResultValue = vue3SetUpResultValue.substring(0, vue3SetUpResultValue.lastIndexOf(methodBodyContent)) + tempMethodText + vue3SetUpResultValue.substring(vue3SetUpResultValue.lastIndexOf(methodBodyContent) + methodBodyContent.length(), vue3SetUpResultValue.length());
 				
@@ -1095,13 +1129,10 @@ public class Vue2ToVue3Process {
 		// 处理data部分
 		vue3SetUpResultContent += "return {\n";
 		
-		/*for(String dataValue:dataResultList)
+		for(String dataValue:setUpReturnResultList)
         {
 			vue3SetUpResultContent += dataValue + ",\n";
-        }*/
-		if (dataResultList.size() > 0) {
-			vue3SetUpResultContent += "state,\n";
-		}
+        }
 		
 		// 拼接传入的props 信息
 		if (!"".equals(getParentPropsInfo)) vue3SetUpResultContent += getParentPropsInfo;
@@ -1127,13 +1158,13 @@ public class Vue2ToVue3Process {
 	 * @param methodBodyContent 方法体
 	 * @return 
 	 */
-	private static String replaceThisOfSetUp(String methodBodyContent) {
+	private static String replaceThisKeyWordOfSetUp(String methodBodyContent) {
 		
 		Map<String, String> methodMap;
 		
 		String methodName = "";
 		
-		// 处理method 部分的 this.xxx
+		// 1. 处理method 部分的 this.xxx
 		for (Map.Entry<String, Map> entry : methodResultMap.entrySet()) {
 			
 			methodMap = entry.getValue();
@@ -1147,17 +1178,33 @@ public class Vue2ToVue3Process {
 			}
 		}
 		
-		// 处理props 部分的  this.xxx
+		// 2. 处理props 部分的  this.xxx
 		for (Map.Entry<String, Map<String, String>> entry : propsResultMap.entrySet()) {
 			
 			methodBodyContent = preReplaceThisOfVue2Method(methodBodyContent, entry.getKey(), "");
 		}
 		
-		// 处理state 部分的  this.xxx
-		for(String dataValue:dataResultList) {
+		// 3. 处理state 部分的  this.xxx
+		for (Map.Entry<String, String> entry : stateDataResultMap.entrySet()) {
 			
-			methodBodyContent = preReplaceThisOfVue2Method(methodBodyContent, dataValue, "state.");
+			methodBodyContent = preReplaceThisOfVue2Method(methodBodyContent, entry.getKey(), "state.");
 		}
+		
+		// 4. 处理setup方法中的路由读取
+		methodBodyContent = replaceRouterInfoOfSetUp(methodBodyContent);
+		
+		// 5. this.$emit => context.emit in setup
+		methodBodyContent = replaceThisEmitWithContext(methodBodyContent);
+		
+		// 6. this.$set() 和 this.$delete 为vue2 中解决无法监听复杂数据类型属性新增删除
+		methodBodyContent = VueProcessUtil.removeVue2BindObjectInfoChangeProcess(methodBodyContent, "set");
+		methodBodyContent = VueProcessUtil.removeVue2BindObjectInfoChangeProcess(methodBodyContent, "delete");
+		
+		// 7. this.$message => Message
+		methodBodyContent = replaceThisMessageWithElMessage(methodBodyContent, false);
+		
+		// 8. this.$refs => ref
+		methodBodyContent = replaceRefInfoGetMethod(methodBodyContent);
 		
 		return methodBodyContent;
 	}
@@ -1395,7 +1442,9 @@ public class Vue2ToVue3Process {
 			// . 或者 [
 			if ('.' == temp.charAt(0)) {
 				
-				originRef = "this.$refs";
+				originRef = "this.$refs.";
+				
+				startIndex += 1;
 				
 				endIndex = TxtContentUtil.getNotVariableIndex(temp, 1);
 				
@@ -1419,9 +1468,9 @@ public class Vue2ToVue3Process {
 				replaceRef = temp;
 			}
 			
-			if (!dataResultList.contains(temp)) {
+			if (!setUpReturnResultList.contains(temp)) {
 				
-				dataResultList.add(temp);
+				setUpReturnResultList.add(temp);
 				
 			}
 			
@@ -1759,14 +1808,17 @@ public class Vue2ToVue3Process {
 			
 			endIndex = TxtContentUtil.getNotVariableIndex(temp, 0);
 			
-			// 判断不是方法调用并且dataResultList中无此变量则添加
+			// 判断不是方法调用并且stateDataResultMap中无此变量则添加
 			if ('(' != temp.charAt(endIndex)) {
 				
 				temp = temp.substring(0, endIndex);
 				
-				if ('$' != temp.charAt(0) && !dataResultList.contains(temp.trim())) {
+				// 非$开头 并且不是 props 同时没有存储过
+				if ('$' != temp.charAt(0) && !propsResultMap.containsKey(temp.trim()) && !stateDataResultMap.containsKey(temp.trim())) {
 					
-					dataResultList.add(temp);
+					stateDataResultMap.put(temp, "");
+					
+					if (!setUpReturnResultList.contains("state")) setUpReturnResultList.add("state");
 				}
 			}
 			
@@ -1791,4 +1843,5 @@ public class Vue2ToVue3Process {
 		
 		return fileContent;
 	}
+	
 }
