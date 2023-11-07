@@ -915,4 +915,15 @@ public class VueProcessUtil {
 		return newVueOptionContent;
 	}
 	
+	/**
+	 * 判断文件内容是否已经是vue3 版本
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static Boolean isVue3FileContent(String sourceText) {
+		
+		return sourceText.indexOf("createApp") > -1 || sourceText.indexOf("setup(") > -1;
+	}
+	
 }

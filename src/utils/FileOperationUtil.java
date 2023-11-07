@@ -18,6 +18,12 @@ public class FileOperationUtil {
 		
 	}
 	
+	private static String currentYYYYMMDD = "";
+	
+	private static String outPutFileDir = "";
+	
+	private static String outPutFilePath = "";
+	
 	private static ArrayList<String> fileList;// 选择的所有文件
 	
 	/**
@@ -198,7 +204,7 @@ public class FileOperationUtil {
 	        {
 				relativeFilePath = filePath.substring(filePath.indexOf(selectedFileDir) + selectedFileDir.length(), filePath.length());
 				
-				System.out.println("拷贝文件:" + filePath);
+				ConvertLogUtil.printConvertLog("info", "拷贝文件:" + filePath);
 				
 				createResultFile(outPutFileDir, outPutFileDir + relativeFilePath);// 先创建目标文件
 				
@@ -232,6 +238,32 @@ public class FileOperationUtil {
 	       sourceChannel.close();
 	       destChannel.close();
 	   }
+	}
+	
+	/**
+	 * 打印日志信息到本地
+	 * 
+	 */
+	public static void printToolLogs(String logContent) {
+		
+		if ("".equals(currentYYYYMMDD)) {
+			
+			currentYYYYMMDD = TxtContentUtil.getCurrentYYYYMMDD();
+			
+			outPutFileDir = System.getProperty("user.dir") + "//";
+			
+			outPutFilePath = outPutFileDir + "ConvertVAR_" + currentYYYYMMDD + ".txt";
+		}
+		
+		try {
+			
+			createResultFile(outPutFileDir, outPutFilePath);// 创建生成的文件
+	    	
+			FileOperationUtil.writeContentIntoFile(outPutFilePath, logContent);//写入文件
+			
+		} catch(IOException err) {
+			
+		}
 	}
 	
 	/**

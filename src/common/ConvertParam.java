@@ -12,6 +12,9 @@ public class ConvertParam {
 	// 版本号信息
 	public static String TOOL_VERSION = "1.0.0 Beta";
 	
+	// 当前环境标志信息，true 为本地开发测试
+	public static Boolean IS_DEV_FLAG = false;
+	
 	// 本地测试输出文件夹
 	public static String LOCAL_TEST_OUTPUT_FILE_PATH = "Documents/测试数据/";
 		

@@ -16,7 +16,7 @@ import utils.VueProcessUtil;
  * @author 郑荣鸿（ChengWingHung）
  * @date 20231010
  * @description vue2升级vue3处理类
- * @version 1.0.0
+ * @version 1.0.0 beta
  *
  */
 
@@ -44,9 +44,9 @@ public class Vue2ToVue3Process {
 	
 	private static ArrayList<String> setUpReturnResultList;// setup return data 信息
 	
-	private static String selfDefinePropsValue = "";// 自身定义的 props 信息
+	private static String templateRef = "";// 模板引用
 	
-	private static String routerDefineValue = "";// setup 中路由定义信息
+	private static String selfDefinePropsValue = "";// 自身定义的 props 信息
 	
 	private static String emitTypeDefineValue = "";// emit 类型信息
 	
@@ -54,13 +54,18 @@ public class Vue2ToVue3Process {
 	
 	public static String parseVue2FileContent(String fileName, String parseResultContent) {
 		
+		// 先判断文件是否为vue3 版本，是的话则不继续处理
+		if (VueProcessUtil.isVue3FileContent(parseResultContent)) return parseResultContent;
+		
+		templateRef = "";
+		
 		parseFileName = fileName;
 		
 		parseResultMap = new HashMap<>();
 		
 		clearInfoMap = new HashMap<>();
 		
-		System.out.print("解析前：\n" + parseResultContent);
+		ConvertLogUtil.printConvertLog("info", "解析前：\n" + parseResultContent);
 		
 		parseResultContent = changeGlobalApi(parseResultContent);
 		
@@ -75,9 +80,12 @@ public class Vue2ToVue3Process {
 		
 		// 状态管理 this.$store => store
 		parseResultContent = replaceThisStoreWithVuex(parseResultContent);
-				
+		
 		// 路由
-		parseResultContent = changeVueRoute(parseResultContent);
+		parseResultContent = changeVueRouteInNewWay(parseResultContent);
+		
+		// css
+		parseResultContent = changeCssDifferentUse(parseResultContent);
 		
 		// TypeScript 版本
 		parseResultContent = changeTypeScriptVersion(parseResultContent);
@@ -88,7 +96,7 @@ public class Vue2ToVue3Process {
 		// 处理解析后的内容格式
 		parseResultContent = TxtContentUtil.processFileContentFormat(parseResultContent, FileOperationUtil.getFileType(parseFileName), "vue");
 		
-		System.out.println("解析后：\n" + parseResultContent);
+		ConvertLogUtil.printConvertLog("info", "解析后：\n" + parseResultContent);
 		
 		return parseResultContent;
 	}
@@ -292,6 +300,9 @@ public class Vue2ToVue3Process {
 		
 		int startInex = -1;// 获取截取初始位置
 		int endIndex = -1;// 获取截取结束位置
+		
+		// $children => ref  这里先判断是否使用到了$children 有的话添加ref ，名字为文件名小写，模板引用用于替换$children
+		fileContent = setTemplateChildrenWithRef(fileContent);
 		
 		// Vue.component( 形式，单独处理，前面全局api 处已替换为 app.component
 		if (fileContent.indexOf("app.component(") > -1) {
@@ -672,12 +683,6 @@ public class Vue2ToVue3Process {
 			setUpContentText = "emits: [\n" + emitTypeDefineValue.substring(0, emitTypeDefineValue.length() - 1) + "\n],\n" + setUpContentText;
 		}
 		
-		// 路由信息插入最后一个import 后
-		if (!"".equals(routerDefineValue)) {
-			
-			setUpContentText += routerDefineValue;
-		}
-		
 		if (!"".equals(tempText)) {
 			
 			setUpContentText += tempText;
@@ -1048,7 +1053,6 @@ public class Vue2ToVue3Process {
 	 */
 	private static String assembleVue3SetUpApi(String getSelfPropsInfo, String getParentPropsInfo) {
 		
-		routerDefineValue = "";
 		emitTypeDefineValue = "";
 		
 		String tempMethodText = "";
@@ -1191,7 +1195,8 @@ public class Vue2ToVue3Process {
 		}
 		
 		// 4. 处理setup方法中的路由读取
-		methodBodyContent = replaceRouterInfoOfSetUp(methodBodyContent);
+		// methodBodyContent = replaceRouterInfoOfSetUp(methodBodyContent, "this.$router", "this.$route");
+		// methodBodyContent = replaceRouterInfoOfSetUp(methodBodyContent, "$router", "$route");
 		
 		// 5. this.$emit => context.emit in setup
 		methodBodyContent = replaceThisEmitWithContext(methodBodyContent);
@@ -1203,7 +1208,13 @@ public class Vue2ToVue3Process {
 		// 7. this.$message => Message
 		methodBodyContent = replaceThisMessageWithElMessage(methodBodyContent, false);
 		
-		// 8. this.$refs => ref
+		if (!"".equals(templateRef)) {
+			
+			// 8. this.$children => this.$ref.templateRef
+			methodBodyContent = replaceThisChildrenByRef(methodBodyContent);
+		}
+		
+		// 9. this.$refs => ref
 		methodBodyContent = replaceRefInfoGetMethod(methodBodyContent);
 		
 		return methodBodyContent;
@@ -1224,26 +1235,32 @@ public class Vue2ToVue3Process {
 	 * @param methodBodyContent 方法体
 	 * @return 
 	 */
-	private static String replaceRouterInfoOfSetUp(String methodBodyContent) {
+	private static String replaceRouterInfoOfSetUp(String methodBodyContent, String routerType, String routeType) {
+		
+		int startIndex = -1;
 		
 		// this.$router
-		if (methodBodyContent.indexOf("this.$router") > -1) {
+		if (methodBodyContent.indexOf(routerType) > -1) {
 			
 			addVue3ImportContent("vue-router", "useRouter");// 引入useRouter
 			
-			if (routerDefineValue.indexOf("\nconst vueRouter = useRouter();\n") < 0) routerDefineValue += "\nconst vueRouter = useRouter();\n";
+			addVue3DefineContent("vueRouter", "\nconst vueRouter = useRouter();\n", "define");
 			
-			methodBodyContent = methodBodyContent.replace("this.$router", "vueRouter");
+			startIndex = methodBodyContent.indexOf(routerType) + routerType.length();
+			
+			return methodBodyContent.substring(0, startIndex).replace(routerType, "vueRouter") + replaceRouterInfoOfSetUp(methodBodyContent.substring(startIndex, methodBodyContent.length()), routerType, routeType);
 		}
 		
 		// this.$route
-		if (methodBodyContent.indexOf("this.$route") > -1) {
+		if (methodBodyContent.indexOf(routeType) > -1) {
 			
 			addVue3ImportContent("vue-router", "useRoute");// 引入useRoute
 			
-			if (routerDefineValue.indexOf("\nconst vueRoute = useRoute();\n") < 0) routerDefineValue += "\nconst vueRoute = useRoute();\n";
+			addVue3DefineContent("vueRoute", "\nconst vueRoute = useRoute();\n", "define");
 			
-			methodBodyContent = methodBodyContent.replace("this.$route", "vueRoute");
+			startIndex = methodBodyContent.indexOf(routeType) + routeType.length();
+			
+			return methodBodyContent.substring(0, startIndex).replace(routeType, "vueRoute") + replaceRouterInfoOfSetUp(methodBodyContent.substring(startIndex, methodBodyContent.length()), routerType, routeType);
 		}
 		
 		return methodBodyContent;
@@ -1301,7 +1318,7 @@ public class Vue2ToVue3Process {
 			
 			addVue3ImportContent("vuex", "useStore");// 从 vuex 引入 useStore
 			
-			addVue3DefineContent("store", "const store = useStore();", "setupDefine");
+			addVue3DefineContent("store", "\nconst store = useStore();\n", "define");
 			
 			// $无法替换，使用Matcher.quoteReplacement解决
 			methodBodyContent = methodBodyContent.replaceAll(Matcher.quoteReplacement("this.$store."), "store.");
@@ -1417,6 +1434,25 @@ public class Vue2ToVue3Process {
 	}
 	
 	/**
+	 * this.$children => this.$ref.templateRef
+	 * 
+	 * 
+	 * @param methodBodyContent
+	 * @return
+	 */
+	public static String replaceThisChildrenByRef(String methodBodyContent) {
+		
+		if (methodBodyContent.indexOf("this.$children") > -1) {
+			
+			int startIndex = methodBodyContent.indexOf("this.$children") + "this.$children".length();
+			
+			return methodBodyContent.substring(0, startIndex).replace("this.$children", "this.$refs." + templateRef) + replaceThisChildrenByRef(methodBodyContent.substring(startIndex, methodBodyContent.length()));
+		}
+		
+		return methodBodyContent;
+	}
+	
+	/**
 	 * this.$refs => ref
 	 * 引入 import { ref } from "vue"; 
 	 * 
@@ -1474,7 +1510,7 @@ public class Vue2ToVue3Process {
 				
 			}
 			
-			addVue3ImportContent("vue", "ref");// 从 vuex 引入 useStore
+			addVue3ImportContent("vue", "ref");// 从 vue 引入 ref
 			
 			addVue3DefineContent(temp, "const " + temp + " = ref(null);", "setupDefine");
 			
@@ -1685,7 +1721,7 @@ public class Vue2ToVue3Process {
 		return fileContent;
 	}
 	
-	private static String changeVueRoute(String fileContent) {
+	private static String changeVueRouteInNewWay(String fileContent) {
 		
 		// 1 router-link -> RouterLink
 		// 2 v-bind=“route" -> :to="route"
@@ -1760,6 +1796,9 @@ public class Vue2ToVue3Process {
 			
 		}
 		
+		fileContent = replaceRouterInfoOfSetUp(fileContent, "this.$router", "this.$route");
+		fileContent = replaceRouterInfoOfSetUp(fileContent, "$router", "$route");
+		
 		return fileContent;
 	}
 	
@@ -1824,6 +1863,37 @@ public class Vue2ToVue3Process {
 			
 			getAllVariableOfMethodUse(methodBodyContent.substring(methodBodyContent.indexOf("this.") + endIndex, methodBodyContent.length()));
 		}
+	}
+	
+	/**
+	 * 为模板元素添加ref 引用
+	 * 
+	 * @param fileContent
+	 * @return
+	 */
+	public static String setTemplateChildrenWithRef(String fileContent) {
+		
+		// 存在模板标签且存在$children 引用
+		if (fileContent.indexOf("<template") > -1 && fileContent.indexOf("</template") > -1 && fileContent.indexOf("<template") < fileContent.indexOf("</template") && fileContent.indexOf("$children") > -1) {
+			
+			int startIndex = -1;
+			
+			templateRef = TxtContentUtil.reNameVariable(parseFileName.substring(0, parseFileName.lastIndexOf('.'))).toLowerCase() + "Ref";
+			
+			startIndex = fileContent.indexOf("<template") + "<template".length();
+			
+			fileContent = fileContent.substring(0, startIndex) + " ref=\"" + templateRef + "\"" + fileContent.substring(startIndex, fileContent.length());
+			
+		}
+		
+		return fileContent;
+	}
+	
+	private static String changeCssDifferentUse(String fileContent) {
+		
+		
+		
+		return fileContent;
 	}
 	
 	private static String changeTypeScriptVersion(String fileContent) {

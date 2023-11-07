@@ -1,5 +1,8 @@
 package utils;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
 import common.ConvertParam;
 
 public class TxtContentUtil {
@@ -468,6 +471,24 @@ public class TxtContentUtil {
 	}
 	
 	/**
+	 * 获取当前年月日
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String getCurrentYYYYMMDD() {
+		
+		// 获取当前日期
+	    LocalDate currentDate = LocalDate.now();
+
+	    // 定义日期格式
+	    DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+	    // 格式化日期为指定格式
+	    return currentDate.format(dateFormatter);
+	}
+	
+	/**
 	 * 获取语句有实际字符开始的索引
 	 * 
 	 * @param sourceText
@@ -481,4 +502,5 @@ public class TxtContentUtil {
 		
 		return startIndex;
 	}
+	
 }

@@ -10,6 +10,7 @@ import javax.swing.filechooser.FileSystemView;
 
 import common.ConvertParam;
 import converttype.Vue2ToVue3Process;
+import utils.ConvertLogUtil;
 import utils.FileOperationUtil;
 
 import java.awt.*;
@@ -166,7 +167,7 @@ public class ConvertPanel extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
             	
-                System.out.println("点击了执行操作");
+            	ConvertLogUtil.printConvertLog("info", "点击了执行操作");
                 
                 if (typeSelectBox.getSelectedIndex() < 1) {
                 	JOptionPane.showMessageDialog(lastLayoutPanel, "请选择要操作的类型", "警告", JOptionPane.ERROR_MESSAGE);
@@ -243,17 +244,17 @@ public class ConvertPanel extends JFrame {
 			
 			// 此处后续可以考虑优化为全部解析完成后再生成文件，如果需要在解析某个文件中间过程中去增加其他文件的信息时
 			
-			System.out.println("所有文件解析完成");
+			ConvertLogUtil.printConvertLog("info", "所有文件解析完成");
 			
 			String showResult = "<html><body>";
 			
 			if (fileTypeIndex == 1) {
 				
-				System.out.println("******************开始拷贝文件******************");
+				ConvertLogUtil.printConvertLog("info", "******************开始拷贝文件******************");
 				
 				FileOperationUtil.copySourceFileList(copyFileList, selectedFileDir, outPutFileDir);// 拷贝文件内容并显示转换结果信息
 				
-				System.out.println("******************文件拷贝完成******************");
+				ConvertLogUtil.printConvertLog("info", "******************文件拷贝完成******************");
 				
 				showResult = "<html><body>";
 				
@@ -309,7 +310,7 @@ public class ConvertPanel extends JFrame {
     		resultFilePath = currentFilePath;
     		resultFileName = currentFilePath.lastIndexOf('/') > -1?currentFilePath.substring(currentFilePath.lastIndexOf('/'), currentFilePath.length()):currentFilePath;
     		
-    		System.out.println("当前执行的文件：" + resultFilePath);
+    		ConvertLogUtil.printConvertLog("info", "当前执行的文件：" + resultFilePath);
     		
     		parseResultFileContent = Vue2ToVue3Process.parseVue2FileContent(resultFileName, fileContentValue);//vue2->vue3
     		
@@ -335,7 +336,7 @@ public class ConvertPanel extends JFrame {
             	
             } catch(IOException err) {
     			
-            	System.out.print("创建文件失败:" + resultFilePath);
+            	ConvertLogUtil.printConvertLog("error", "创建文件失败:" + resultFilePath);
     		}
     		
     	}
@@ -348,7 +349,8 @@ public class ConvertPanel extends JFrame {
 	}
 	
 	/**
-	 * 显示处理结果信息
+	 * 显示处理结果信息 async 待处理
+	 * 
 	 * @param showResult
 	 * 
 	 */
