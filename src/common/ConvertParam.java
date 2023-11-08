@@ -16,7 +16,7 @@ public class ConvertParam {
 	public static Boolean IS_DEV_FLAG = false;
 	
 	// 本地测试输出文件夹
-	public static String LOCAL_TEST_OUTPUT_FILE_PATH = "Documents/测试数据/";
+	public static String LOCAL_TEST_OUTPUT_FILE_PATH = "";// Documents/测试数据/
 		
 	// vue3实际输出文件夹
 	public static String VUE3_OUTPUT_FILE_PATH = "vu2tovue3";
@@ -27,7 +27,7 @@ public class ConvertParam {
 	// import新的内容标志
 	public static char IMPORT_STRING = '#';
 	
-	// import新的内容标志
+	// import新的内容
 	public static String IMPORT_FLG = "import";
 	
 	// 定义新的变量标志

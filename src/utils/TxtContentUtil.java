@@ -12,7 +12,7 @@ public class TxtContentUtil {
 	}
 	
 	/**
-	 * 获取html标签属性值
+	 * 获取html 标签属性值
 	 * 
 	 * @param sourceText
 	 * @param propsName
@@ -20,7 +20,6 @@ public class TxtContentUtil {
 	 * @return
 	 */
 	public static String getHtmlTagProps(String sourceText, String propsName, String endProps) {
-		
 		
 		String resultText = sourceText.substring(sourceText.indexOf(propsName) + propsName.length(), sourceText.length());
 		
@@ -30,7 +29,7 @@ public class TxtContentUtil {
 	}
 	
 	/**
-	 * 清除html标签属性值
+	 * 清除html 标签属性值
 	 * 
 	 * @param sourceText
 	 * @param propsName
@@ -449,6 +448,8 @@ public class TxtContentUtil {
 			}
 		}
 		
+		if ("".equals(variableName)) variableName = "iLoveYouForever";
+		
 		return variableName;
 	}
 	
@@ -473,7 +474,6 @@ public class TxtContentUtil {
 	/**
 	 * 获取当前年月日
 	 * 
-	 * @param sourceText
 	 * @return
 	 */
 	public static String getCurrentYYYYMMDD() {

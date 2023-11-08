@@ -164,7 +164,7 @@ public class FileOperationUtil {
 	 * 将内容写入文件
 	 * 
 	 */
-	public static void writeContentIntoFile(String filePath, String fileContent) {
+	public static void writeContentIntoFile(String filePath, String fileContent, Boolean append) {
 		
 		FileWriter writer = null;
 		
@@ -172,7 +172,7 @@ public class FileOperationUtil {
         	
         	File file = new File(filePath);
         	
-            writer = new FileWriter(file);
+            writer = new FileWriter(file, append);
             
             writer.write(fileContent);
             
@@ -257,9 +257,11 @@ public class FileOperationUtil {
 		
 		try {
 			
+			logContent = logContent + "\n";
+			
 			createResultFile(outPutFileDir, outPutFilePath);// 创建生成的文件
 	    	
-			FileOperationUtil.writeContentIntoFile(outPutFilePath, logContent);//写入文件
+			writeContentIntoFile(outPutFilePath, logContent, true);//写入文件
 			
 		} catch(IOException err) {
 			

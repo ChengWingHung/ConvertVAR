@@ -15,7 +15,6 @@ public class ConvertLogUtil {
 			System.out.println(type + ":" + logContent);
 		} else {
 			
-			// async 待处理
 			FileOperationUtil.printToolLogs(type + ":" + logContent);
 		}
 	}

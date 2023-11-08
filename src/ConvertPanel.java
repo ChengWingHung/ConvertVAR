@@ -332,7 +332,7 @@ public class ConvertPanel extends JFrame {
     			
             	FileOperationUtil.createResultFile(outPutFileDir, outPutFilePath);// 创建生成的文件
             	
-        		FileOperationUtil.writeContentIntoFile(outPutFilePath, parseResultFileContent);//写入文件
+        		FileOperationUtil.writeContentIntoFile(outPutFilePath, parseResultFileContent, false);//写入文件
             	
             } catch(IOException err) {
     			
@@ -349,7 +349,7 @@ public class ConvertPanel extends JFrame {
 	}
 	
 	/**
-	 * 显示处理结果信息 async 待处理
+	 * 显示处理结果信息
 	 * 
 	 * @param showResult
 	 * 

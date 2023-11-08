@@ -296,7 +296,7 @@ public class Vue2ToVue3Process {
 		String vueRenderContent = "";// Vue.component render 部分内容
 		String vueComponentContent = "";// Vue.component 部分内容
 		
-		Boolean isCreateApp = false;// 是否new vue 形式的
+		Boolean isCreateApp = false;// 是否new vue 形式
 		
 		int startInex = -1;// 获取截取初始位置
 		int endIndex = -1;// 获取截取结束位置
@@ -574,7 +574,7 @@ public class Vue2ToVue3Process {
 			optionsConfigText = optionsConfigText.replace(dataResultText, "");// 替换掉整个data的内容
 		}
 		
-		// 判断filters、computed、watch、method
+		// 判断filters、computed、watch、methods
 		for (int i=0;i<ConvertParam.Vue2ToVue3SetUpMethodList.length;i++) {
 			
 			tempText = getMethodContent(ConvertParam.Vue2ToVue3SetUpMethodList[i], optionsConfigText);
@@ -848,7 +848,13 @@ public class Vue2ToVue3Process {
 		return tempText;// 得到整个方法内容用于替换
 	}
 	
-	// 获取option api中转换到setup的所有方法
+	/**
+	 * 获取option api中转换到setup的所有方法
+	 * 
+	 * @param methodType
+	 * @param methodContent
+	 * @return
+	 */ 
 	private static void getMethodResultMap(String methodType, String methodContent){
 		
 		// 为空的时候无需解析
@@ -1121,7 +1127,7 @@ public class Vue2ToVue3Process {
 				
 				tempMethodText = methodBodyContent;
 						
-				// 处理setup方法中的this.
+				// 处理setup方法中的this
 				tempMethodText = replaceThisKeyWordOfSetUp(tempMethodText);
 				
 				vue3SetUpResultValue = vue3SetUpResultValue.substring(0, vue3SetUpResultValue.lastIndexOf(methodBodyContent)) + tempMethodText + vue3SetUpResultValue.substring(vue3SetUpResultValue.lastIndexOf(methodBodyContent) + methodBodyContent.length(), vue3SetUpResultValue.length());
@@ -1332,6 +1338,7 @@ public class Vue2ToVue3Process {
 	 * 引入 import {ElMessage} from 'element-plus'; 
 	 * 
 	 * @param methodBodyContent
+	 * @param addElMessage 是否添加过标志
 	 * @return
 	 */
 	public static String replaceThisMessageWithElMessage(String methodBodyContent, Boolean addElMessage) {
@@ -1436,7 +1443,6 @@ public class Vue2ToVue3Process {
 	/**
 	 * this.$children => this.$ref.templateRef
 	 * 
-	 * 
 	 * @param methodBodyContent
 	 * @return
 	 */
@@ -1455,7 +1461,6 @@ public class Vue2ToVue3Process {
 	/**
 	 * this.$refs => ref
 	 * 引入 import { ref } from "vue"; 
-	 * 
 	 * 
 	 * @param methodBodyContent
 	 * @return
@@ -1525,6 +1530,7 @@ public class Vue2ToVue3Process {
 	 * 
 	 * @param variableKey 变量名
 	 * @param variableContent 具体定义内容
+	 * @param defineType 定义的内容类型 
 	 */
 	private static void addVue3DefineContent(String variableKey, String variableContent, String defineType) {
 		
@@ -1547,7 +1553,7 @@ public class Vue2ToVue3Process {
 	/**
 	 * 添加import 信息部分
 	 * 
-	 * @param fromKey 从那个库引入，库名
+	 * @param fromKey 从哪个库引入，库名
 	 * @param importContent 引入的具体内容
 	 */
 	private static void addVue3ImportContent(String fromKey, String importContent) {
