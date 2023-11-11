@@ -145,7 +145,7 @@ public class TxtContentUtil {
 		
 		String tempText = sourceText.substring(startInex, sourceText.length());
 		
-		endIndex = getTagEndIndex(tempText, '{', '}') + 1;
+		endIndex = getTagEndIndex(tempText, startTag, endTag) + 1;
 		
 		tempText = tempText.substring(0, endIndex);
 		

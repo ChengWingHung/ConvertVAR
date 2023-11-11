@@ -1,6 +1,5 @@
 package utils;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -684,6 +683,7 @@ public class VueProcessUtil {
 	 * 组件属性转换
 	 * 
 	 * @param fileContent
+	 * @param parseResultMap
 	 * @return
 	 */
 	public static String changeComponentPropertys(String fileContent, Map<String, Map> parseResultMap) {
@@ -781,6 +781,7 @@ public class VueProcessUtil {
 	 * 处理vue3 中移除的实例
 	 * 
 	 * @param sourceText
+	 * @param parseResultMap
 	 * @return
 	 */
 	public static String removeUnUseInstanceInVue3(String sourceText, Map<String, Map> parseResultMap) {
@@ -848,6 +849,7 @@ public class VueProcessUtil {
 	 * 2. this.$delete  => console.log("state data changed")
 	 * 
 	 * @param methodBodyContent
+	 * @param processType
 	 * @return
 	 */
 	public static String removeVue2BindObjectInfoChangeProcess(String methodBodyContent, String processType) {
@@ -882,7 +884,9 @@ public class VueProcessUtil {
 	/**
 	 * use(xxx) 的处理
 	 * 
+	 * @param optionApiPropMap
 	 * @param newVueOptionContent
+	 * @param useTypeValue
 	 * @return
 	 */
 	public static String getNewVueOptionsUseContent(Map<String, Map<String, String>> optionApiPropMap, String newVueOptionContent, String useTypeValue) {

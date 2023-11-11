@@ -604,7 +604,16 @@ public class Vue2ToVue3Process {
 				// 说明是来自传入的props
 				if ("".equals(propMap.getKey())) {
 					
-					getParentPropsInfo += entry.getKey() + ",\n";
+					tempText = entry.getKey();
+					
+					tempText = tempText.trim();
+					
+					if (tempText.charAt(0) == tempText.charAt(tempText.length() - 1) && !String.valueOf(tempText.charAt(0)).matches(ConvertParam.JS_VARIABLE_REG)) {
+						
+						tempText = tempText.substring(1, tempText.length() - 1);
+					}
+						
+					getParentPropsInfo += tempText + ",\n";
 				} else {
 					
 					getSelfPropsInfo += entry.getKey() + ",\n";
@@ -1320,14 +1329,23 @@ public class Vue2ToVue3Process {
 	 */
 	public static String replaceThisStoreWithVuex(String methodBodyContent) {
 		
-		if (methodBodyContent.indexOf("this.$store.") > -1) {
+		methodBodyContent = replaceStoreInfoWithVuex(methodBodyContent, "this.$store.");
+		
+		methodBodyContent = replaceStoreInfoWithVuex(methodBodyContent, "$store.");
+		
+		return methodBodyContent;
+	}
+	
+	public static String replaceStoreInfoWithVuex(String methodBodyContent, String storeType) {
+		
+		if (methodBodyContent.indexOf(storeType) > -1) {
 			
 			addVue3ImportContent("vuex", "useStore");// 从 vuex 引入 useStore
 			
 			addVue3DefineContent("store", "\nconst store = useStore();\n", "define");
 			
 			// $无法替换，使用Matcher.quoteReplacement解决
-			methodBodyContent = methodBodyContent.replaceAll(Matcher.quoteReplacement("this.$store."), "store.");
+			methodBodyContent = methodBodyContent.replaceAll(Matcher.quoteReplacement(storeType), "store.");
 		}
 		
 		return methodBodyContent;
