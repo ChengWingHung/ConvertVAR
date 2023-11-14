@@ -19,6 +19,7 @@ import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class ConvertPanel extends JFrame {
 
@@ -60,6 +61,8 @@ public class ConvertPanel extends JFrame {
 	public JLabel processResultLabel;// 显示文件处理信息
 	
 	private boolean hasSelectedFileFlg = false;// 是否已选择要执行的文件
+	
+	private long parseFileStartTime;
 	
 	public ConvertPanel()
     {
@@ -215,6 +218,8 @@ public class ConvertPanel extends JFrame {
                 processFileTypeIndex = typeSelectBox.getSelectedIndex();
                 processFileIndex = 0;
                 
+                parseFileStartTime = new Date().getTime();
+                
                 readFileContentAndParse(processFileIndex);
                 	
             }
@@ -246,6 +251,8 @@ public class ConvertPanel extends JFrame {
 			
 			ConvertLogUtil.printConvertLog("info", "所有文件解析完成");
 			
+			parseFileStartTime = new Date().getTime() - parseFileStartTime;
+			
 			String showResult = "<html><body>";
 			
 			if (fileTypeIndex == 1) {
@@ -258,7 +265,7 @@ public class ConvertPanel extends JFrame {
 				
 				showResult = "<html><body>";
 				
-				showResult += "解析完成！<br/>";
+				showResult += "解析完成！总耗时" + parseFileStartTime + "毫秒！<br/>";
 				
 				showResult += "选择文件" + fileList.size() + "个;";
 				
@@ -273,7 +280,7 @@ public class ConvertPanel extends JFrame {
 				
 				if (errorFileList.size() == 0) {
 					
-					showResult = "解析成功！";
+					showResult = "解析成功！耗时" + parseFileStartTime + "毫秒！";
 				} else {
 					
 					showResult = "解析失败！";

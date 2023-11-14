@@ -478,6 +478,18 @@ public class Vue2ToVue3Process {
 		
 		selfDefinePropsValue = "";
 		
+		// 获取mixins信息，直接添加到return中
+		if (optionApiPropMap.containsKey("mixins")) {
+			
+			apiDataMap = optionApiPropMap.get("mixins");
+			
+			for (String mixinValue:apiDataMap.get("apiNameValue").split(",")) {
+				
+				if(!"".equals(mixinValue)) setUpReturnResultList.add(mixinValue);
+			}
+			
+		}
+		
 		// 获取props整个信息
 		if (optionApiPropMap.containsKey("props")) {
 			

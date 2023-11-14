@@ -392,19 +392,45 @@ public class TxtContentUtil {
 		
 		lineContent = sourceText.substring(0, sourceText.indexOf('\n') + 1);
 		
-		if (lineContent.indexOf('{') > -1) {
+		// 1. 处理[ 和 { 成对包含的情况
+		char startChar = ' ';
+		char endChar = ' ';
+		
+		if (lineContent.indexOf('{') > -1 && lineContent.indexOf('[') > -1) {
 			
-			tempText = sourceText.substring(lineContent.indexOf('{'), sourceText.length());
-			
-			endIndex = getTagEndIndex(tempText, '{', '}') + lineContent.indexOf('{');
-			
-			if (lineContent.indexOf('{') + 1 < endIndex) {
+			if (lineContent.indexOf('{') > lineContent.indexOf('[')) {
 				
-				tempText = sourceText.substring(lineContent.indexOf('{') + 1, endIndex);
+				startChar = '{';
+				endChar = '}';
+			} else {
+				
+				startChar = '[';
+				endChar = ']';
+			}
+		} else if (lineContent.indexOf('{') > -1) {
+			
+			startChar = '{';
+			endChar = '}';
+			
+		} else if (lineContent.indexOf('[') > -1) {
+			
+			startChar = '[';
+			endChar = ']';
+		}
+		
+		if (' ' != startChar) {
+			
+			tempText = sourceText.substring(lineContent.indexOf(startChar), sourceText.length());
+			
+			endIndex = getTagEndIndex(tempText, startChar, endChar) + lineContent.indexOf(startChar);
+			
+			if (lineContent.indexOf(startChar) + 1 < endIndex) {
+				
+				tempText = sourceText.substring(lineContent.indexOf(startChar) + 1, endIndex);
 				
 				if (tempText.indexOf('\n') > -1) {
 					
-					return getIndentCountResutl(indentCount) + lineContent.substring(0, lineContent.indexOf('{') + 1) + processJSContentFormat(tempText, indentCount + 2) + processJSContentFormat(sourceText.substring(endIndex, sourceText.length()), indentCount);
+					return getIndentCountResutl(indentCount) + lineContent.substring(0, lineContent.indexOf(startChar) + 1) + processJSContentFormat(tempText, indentCount + 2) + processJSContentFormat(sourceText.substring(endIndex, sourceText.length()), indentCount);
 				}
 			}
 			

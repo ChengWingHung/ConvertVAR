@@ -1,15 +1,15 @@
 # ConvertVAR
 ## description
-convert vue and react
+前端框架vue和react版本升级及两大框架之间相互转换为新版本处理工具
 ## author 
-chengwinghung
+ChengWingHung
 ## date
 20231010
 ## 使用技术
-java/vue/react
+java、vue、react
 ## 转换原理
-将源代码转换为 AST 语法树再解析拼接、将源代码视为
-字符串再解析拼接（本软件采用后者）
+1. 将源代码转换为 AST 语法树再解析拼接;
+2. 将源代码视为字符串再解析拼接（本软件采用此方法）;
 ## 软件开发背景
 本软件针对当前市场上使用的前端主流框架 vue 和
 react 不同版本之间或者两个框架之间的迭代升级需要投入大量人力

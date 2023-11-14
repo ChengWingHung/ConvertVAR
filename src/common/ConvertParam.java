@@ -34,7 +34,7 @@ public class ConvertParam {
 	public static char DEFINE_STRING = '^';
 	
 	// 需要记录值的key
-	public static String RECORD_PROPERTY_NAME = "el,render";
+	public static String RECORD_PROPERTY_NAME = "el,render,mixins";
 	
 	// 定义变量命名规则
 	public static String JS_VARIABLE_REG = "^[A-Za-z0-9_\\$]";
