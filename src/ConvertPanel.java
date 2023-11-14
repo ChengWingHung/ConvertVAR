@@ -9,6 +9,9 @@ import javax.swing.JTextField;
 import javax.swing.filechooser.FileSystemView;
 
 import common.ConvertParam;
+import converttype.ReactClassToFuncProcess;
+import converttype.ReactClassToVue3Process;
+import converttype.Vue2ToReactFuncProcess;
 import converttype.Vue2ToVue3Process;
 import utils.ConvertLogUtil;
 import utils.FileOperationUtil;
@@ -175,7 +178,7 @@ public class ConvertPanel extends JFrame {
                 if (typeSelectBox.getSelectedIndex() < 1) {
                 	JOptionPane.showMessageDialog(lastLayoutPanel, "请选择要操作的类型", "警告", JOptionPane.ERROR_MESSAGE);
                 	return;
-                } else if (typeSelectBox.getSelectedIndex() > 1) {
+                } else if (typeSelectBox.getSelectedIndex() > 2) {
                 	JOptionPane.showMessageDialog(lastLayoutPanel, "目前仅支持vue2升级vue3", "警告", JOptionPane.ERROR_MESSAGE);
                 	return;
                 }
@@ -242,7 +245,15 @@ public class ConvertPanel extends JFrame {
 	 */
 	private void readFileContentAndParse(int fileIndex) {
 		
-		String outPutFileDir = outputTextField.getText() + ConvertParam.LOCAL_TEST_OUTPUT_FILE_PATH + ConvertParam.VUE3_OUTPUT_FILE_PATH + "/";
+		String outPutFileDir = outputTextField.getText() + ConvertParam.LOCAL_TEST_OUTPUT_FILE_PATH;
+		
+		if (processFileTypeIndex == 1 || processFileTypeIndex == 3) {
+			
+			outPutFileDir += ConvertParam.VUE3_OUTPUT_FILE_PATH + "/";
+		} else if (processFileTypeIndex == 2 || processFileTypeIndex == 4) {
+    		
+			outPutFileDir += ConvertParam.REAT_OUTPUT_FILE_PATH + "/";
+    	}
 		
 		// 判断是否解析完毕
 		if (fileIndex == processFileList.size()) {
@@ -311,42 +322,53 @@ public class ConvertPanel extends JFrame {
     	
     	showProcessContent("当前处理文件：" + currentFilePath, 0);
     	
-    	// 调用相应类型解析类
+    	resultFilePath = currentFilePath;
+		resultFileName = currentFilePath.lastIndexOf('/') > -1?currentFilePath.substring(currentFilePath.lastIndexOf('/'), currentFilePath.length()):currentFilePath;
+		
+		ConvertLogUtil.printConvertLog("info", "当前执行的文件：" + resultFilePath);
+		
     	if (processFileTypeIndex == 1) {
     		
-    		resultFilePath = currentFilePath;
-    		resultFileName = currentFilePath.lastIndexOf('/') > -1?currentFilePath.substring(currentFilePath.lastIndexOf('/'), currentFilePath.length()):currentFilePath;
+    		// vue2 => vue3
+    		parseResultFileContent = Vue2ToVue3Process.parseVue2FileContent(resultFileName, fileContentValue);
+    	} else if (processFileTypeIndex == 2) {
     		
-    		ConvertLogUtil.printConvertLog("info", "当前执行的文件：" + resultFilePath);
+    		// react class => function
+    		parseResultFileContent = ReactClassToFuncProcess.parseReactFileContent(resultFileName, fileContentValue);
+    	} else if (processFileTypeIndex == 3) {
     		
-    		parseResultFileContent = Vue2ToVue3Process.parseVue2FileContent(resultFileName, fileContentValue);//vue2->vue3
+    		// vue2 => react function
+    		parseResultFileContent = Vue2ToReactFuncProcess.parseVue2FileContent(resultFileName, fileContentValue);
+    	} else if (processFileTypeIndex == 4) {
     		
-    		String outPutFilePath = "";
-    		
-    		if (fileTypeIndex == 1) {
-    			
-    			// 获取相对路径信息
-    			relativeFilePath = resultFilePath.substring(resultFilePath.indexOf(selectedFileDir) + selectedFileDir.length(), resultFilePath.length());
-    			
-    			outPutFilePath = outPutFileDir + relativeFilePath;
-    			
-    		} else {
-    			
-    			outPutFilePath = outPutFileDir + resultFileName;
-    		}
-    		
-    		try {
-    			
-            	FileOperationUtil.createResultFile(outPutFileDir, outPutFilePath);// 创建生成的文件
-            	
-        		FileOperationUtil.writeContentIntoFile(outPutFilePath, parseResultFileContent, false);//写入文件
-            	
-            } catch(IOException err) {
-    			
-            	ConvertLogUtil.printConvertLog("error", "创建文件失败:" + resultFilePath);
-    		}
-    		
+    		// react class => vue3
+    		parseResultFileContent = ReactClassToVue3Process.parseReactFileContent(resultFileName, fileContentValue);
     	}
+		
+		String outPutFilePath = "";
+		
+		if (fileTypeIndex == 1) {
+			
+			// 获取相对路径信息
+			relativeFilePath = resultFilePath.substring(resultFilePath.indexOf(selectedFileDir) + selectedFileDir.length(), resultFilePath.length());
+			
+			outPutFilePath = outPutFileDir + relativeFilePath;
+			
+		} else {
+			
+			outPutFilePath = outPutFileDir + resultFileName;
+		}
+		
+		try {
+			
+        	FileOperationUtil.createResultFile(outPutFileDir, outPutFilePath);// 创建生成的文件
+        	
+    		FileOperationUtil.writeContentIntoFile(outPutFilePath, parseResultFileContent, false);//写入文件
+        	
+        } catch(IOException err) {
+			
+        	ConvertLogUtil.printConvertLog("error", "创建文件失败:" + resultFilePath);
+		}
     	
     	processFileIndex++;
 		readFileContentAndParse(processFileIndex);

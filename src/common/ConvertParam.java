@@ -13,13 +13,16 @@ public class ConvertParam {
 	public static String TOOL_VERSION = "1.0.0 Beta";
 	
 	// 当前环境标志信息，true 为本地开发测试
-	public static Boolean IS_DEV_FLAG = false;
+	public static Boolean IS_DEV_FLAG = true;
 	
 	// 本地测试输出文件夹
-	public static String LOCAL_TEST_OUTPUT_FILE_PATH = "";// Documents/测试数据/
+	public static String LOCAL_TEST_OUTPUT_FILE_PATH = "Documents/测试数据/";// Documents/测试数据/
 		
-	// vue3实际输出文件夹
-	public static String VUE3_OUTPUT_FILE_PATH = "vu2tovue3";
+	// vue2 => vue3实际输出文件夹
+	public static String VUE3_OUTPUT_FILE_PATH = "vue3_convert_result";
+	
+	// react class => function实际输出文件夹
+	public static String REAT_OUTPUT_FILE_PATH = "react_convert_result";
 		
 	// 转换字符标志
 	public static String CONVERT_STRING = "->";
