@@ -1249,7 +1249,7 @@ public class Vue2ToVue3Process {
 	
 	private static String preReplaceThisOfVue2Method(String methodBodyContent, String originValue, String repalceValue) {
 		
-		methodBodyContent = VueProcessUtil.replaceThisOfVue2Method(methodBodyContent, "this.", originValue, repalceValue);
+		methodBodyContent = VueProcessUtil.replaceThisOfVue2Method(methodBodyContent, "this.", originValue, originValue, repalceValue);
 		
 		return methodBodyContent;
 	}

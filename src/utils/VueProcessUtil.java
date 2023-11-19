@@ -187,42 +187,9 @@ public class VueProcessUtil {
 	 * @param wordType 是state还是props
 	 * @return 替换后信息
 	 */
-	public static String replaceThisOfVue2Method(String sourceText, String thisKeyWord, String KeyWord, String wordType) {
+	public static String replaceThisOfVue2Method(String sourceText, String thisKeyWord, String KeyWord, String replaceKeyWord, String wordType) {
 		
-		String tempTxt = "";
-		String currentMethodTxt = sourceText;
-		
-		int startIndex = -1;
-		
-		if (currentMethodTxt.indexOf(thisKeyWord + KeyWord) > -1) {
-			
-			tempTxt = currentMethodTxt.substring(0, currentMethodTxt.indexOf(thisKeyWord + KeyWord));
-			
-			// 如果前一个字符也是符合变量定义，则说明不是
-			if (String.valueOf(tempTxt.charAt(tempTxt.length() - 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
-				
-				startIndex = currentMethodTxt.indexOf(thisKeyWord + KeyWord) + (thisKeyWord + KeyWord).length();
-				
-			} else {
-				
-				tempTxt = currentMethodTxt.substring(currentMethodTxt.indexOf(thisKeyWord + KeyWord) + (thisKeyWord + KeyWord).length(), currentMethodTxt.length());
-				
-				// 说明不可以替换
-				if ('(' != KeyWord.charAt(KeyWord.length() - 1) && String.valueOf(tempTxt.charAt(0)).matches(ConvertParam.JS_VARIABLE_REG)) {
-					
-					startIndex = currentMethodTxt.indexOf(thisKeyWord + KeyWord) + (thisKeyWord + KeyWord).length();
-					
-				} else {
-					
-					currentMethodTxt = currentMethodTxt.replace(thisKeyWord + KeyWord, wordType + KeyWord);
-					
-					startIndex = currentMethodTxt.indexOf(wordType + KeyWord) + (wordType + KeyWord).length();
-					
-				}
-			}
-			
-			return currentMethodTxt.substring(0, startIndex) + replaceThisOfVue2Method(currentMethodTxt.substring(startIndex, currentMethodTxt.length()), thisKeyWord, KeyWord, wordType);
-		}
+		sourceText = TxtContentUtil.replaceThisOfFrameWorkContent(sourceText, thisKeyWord, KeyWord, replaceKeyWord, wordType);
 		
 		return sourceText;
 	}

@@ -178,9 +178,6 @@ public class ConvertPanel extends JFrame {
                 if (typeSelectBox.getSelectedIndex() < 1) {
                 	JOptionPane.showMessageDialog(lastLayoutPanel, "请选择要操作的类型", "警告", JOptionPane.ERROR_MESSAGE);
                 	return;
-                } else if (typeSelectBox.getSelectedIndex() > 2) {
-                	JOptionPane.showMessageDialog(lastLayoutPanel, "目前仅支持vue2升级vue3", "警告", JOptionPane.ERROR_MESSAGE);
-                	return;
                 }
                 
                 if (!hasSelectedFileFlg) {

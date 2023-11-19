@@ -2,6 +2,7 @@ package utils;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 
 import common.ConvertParam;
 
@@ -10,6 +11,8 @@ public class TxtContentUtil {
 	public TxtContentUtil() {
 		
 	}
+	
+	private static int keyWordIndex = -1;
 	
 	/**
 	 * 获取html 标签属性值
@@ -203,7 +206,13 @@ public class TxtContentUtil {
 		
 		int endIndex = -1;// 获取截取结束位置
 		
-		if (sourceText.indexOf("/**") == 0) {
+		if (sourceText.indexOf("<--") == 0) {
+			
+			tempText = sourceText.substring(sourceText.indexOf("<--"), sourceText.length());
+			
+			commentDescription = tempText.substring(0, tempText.indexOf("-->") + 3);
+			
+		} else if (sourceText.indexOf("/**") == 0) {
 			
 			tempText = sourceText.substring(sourceText.indexOf("/**"), sourceText.length());
 			
@@ -512,6 +521,174 @@ public class TxtContentUtil {
 
 	    // 格式化日期为指定格式
 	    return currentDate.format(dateFormatter);
+	}
+	
+	/**
+	 * 判断是否有某个字符标志并返回对应索引值
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static int getKeyWordIndex(String sourceText,String keyWord) {
+		
+		keyWordIndex = -1;
+		
+		isKeyWordExist(sourceText, keyWord, 0);
+		
+		return keyWordIndex;
+	}
+	
+	/**
+	 * 判断是否有某个字符标志并返回对应索引值
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static void isKeyWordExist(String processContentTxt,String keyWord, int startIndex) {
+		
+		String dataDescription = "";
+		String sourceText = processContentTxt.substring(startIndex, processContentTxt.length());
+		
+		// 先获取注释信息
+		dataDescription = getCommentInformation(sourceText);
+		
+		sourceText = sourceText.substring(sourceText.indexOf(dataDescription) + dataDescription.length(), sourceText.length()).trim();
+		
+		startIndex += dataDescription.length();
+		
+		// 还有注释信息，继续清除
+		if (sourceText.indexOf("<--") == 0 || sourceText.indexOf("/**") == 0 || sourceText.indexOf("//") == 0) {
+			isKeyWordExist(processContentTxt, keyWord, startIndex);
+			return;
+		}
+		
+		if (sourceText.indexOf(keyWord) == 0 && sourceText.length() > keyWord.length() && !String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) + keyWord.length() + 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
+			
+			keyWordIndex = startIndex + sourceText.indexOf(keyWord);
+		} else if (sourceText.indexOf(keyWord) == sourceText.length() - keyWord.length() && !String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) - 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
+			
+			keyWordIndex = startIndex + sourceText.indexOf(keyWord);
+		} else if (sourceText.indexOf(keyWord) > -1 && !String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) - 1)).matches(ConvertParam.JS_VARIABLE_REG) && !String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) + keyWord.length() + 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
+			
+			keyWordIndex = startIndex + sourceText.indexOf(keyWord);
+		} else if (sourceText.indexOf(keyWord) > -1) {
+			
+			startIndex += sourceText.indexOf(keyWord) + keyWord.length();
+			
+			isKeyWordExist(processContentTxt, keyWord, startIndex);
+		}
+	}
+	
+	/**
+	 * 替换内容中的this 信息
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String replaceThisOfFrameWorkContent(String sourceText, String thisKeyWord, String KeyWord, String replaceKeyWord, String wordType) {
+		
+		String tempTxt = "";
+		String currentMethodTxt = sourceText;
+		
+		int startIndex = -1;
+		
+		if (currentMethodTxt.indexOf(thisKeyWord + KeyWord) > -1) {
+			
+			tempTxt = currentMethodTxt.substring(0, currentMethodTxt.indexOf(thisKeyWord + KeyWord));
+			
+			// 如果前一个字符也是符合变量定义，则说明不是
+			if (String.valueOf(tempTxt.charAt(tempTxt.length() - 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
+				
+				startIndex = currentMethodTxt.indexOf(thisKeyWord + KeyWord) + (thisKeyWord + KeyWord).length();
+				
+			} else {
+				
+				tempTxt = currentMethodTxt.substring(currentMethodTxt.indexOf(thisKeyWord + KeyWord) + (thisKeyWord + KeyWord).length(), currentMethodTxt.length());
+				
+				if ("".equals(KeyWord) || '.' == KeyWord.charAt(KeyWord.length() - 1)) {
+					
+					currentMethodTxt = currentMethodTxt.replace(thisKeyWord + KeyWord, wordType + replaceKeyWord);
+					
+					startIndex = currentMethodTxt.indexOf(wordType + KeyWord) + (wordType + KeyWord).length();
+				}
+				// 说明不可以替换
+				else if ('(' != KeyWord.charAt(KeyWord.length() - 1) && String.valueOf(tempTxt.charAt(0)).matches(ConvertParam.JS_VARIABLE_REG)) {
+					
+					startIndex = currentMethodTxt.indexOf(thisKeyWord + KeyWord) + (thisKeyWord + KeyWord).length();
+					
+				} else {
+					
+					currentMethodTxt = currentMethodTxt.replace(thisKeyWord + KeyWord, wordType + replaceKeyWord);
+					
+					startIndex = currentMethodTxt.indexOf(wordType + KeyWord) + (wordType + KeyWord).length();
+					
+				}
+			}
+			
+			return currentMethodTxt.substring(0, startIndex) + replaceThisOfFrameWorkContent(currentMethodTxt.substring(startIndex, currentMethodTxt.length()), thisKeyWord, KeyWord, replaceKeyWord, wordType);
+		}
+		
+		return sourceText;
+	}
+	
+	/**
+	 * 获取所有定义的变量信息
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static void getDefineVariable(String sourceText, ArrayList<String> variableNameList) {
+		
+		String dataDescription = "";
+		
+		// 先获取注释信息
+		dataDescription = getCommentInformation(sourceText);
+		
+		sourceText = sourceText.substring(sourceText.indexOf(dataDescription) + dataDescription.length(), sourceText.length()).trim();
+		
+		// 还有注释信息，继续清除
+		if (sourceText.indexOf("<--") == 0 || sourceText.indexOf("/**") == 0 || sourceText.indexOf("//") == 0) {
+			getDefineVariable(sourceText, variableNameList);
+			return;
+		}
+		
+		sourceText = getDefineVariableAndClearDefine(sourceText, "const ", variableNameList);
+		sourceText = getDefineVariableAndClearDefine(sourceText, "var ", variableNameList);
+		sourceText = getDefineVariableAndClearDefine(sourceText, "let ", variableNameList);
+	}
+	
+	public static String getDefineVariableAndClearDefine(String sourceText, String variableType, ArrayList<String> variableNameList) {
+		
+		String tempTxt = "";
+		String defineContent = "";
+
+		int startIndex = -1;
+		
+		startIndex = getKeyWordIndex(sourceText, variableType);
+		
+		if (startIndex != -1) {
+			
+			tempTxt = sourceText.substring(startIndex, sourceText.length());
+			
+			defineContent = tempTxt.substring(0, getStatementEndIndex(tempTxt, 0));
+			
+			startIndex = getNotVariableIndex(tempTxt, variableType.length());
+			
+			tempTxt = tempTxt.substring(variableType.length(), startIndex);
+			
+			variableNameList.add(tempTxt);
+			
+			sourceText = sourceText.replace(defineContent, "");
+		}
+		
+		startIndex = getKeyWordIndex(sourceText, variableType);
+		
+		if (startIndex != -1) {
+			
+			getDefineVariableAndClearDefine(sourceText, variableType, variableNameList);
+		}
+		
+		return sourceText;
 	}
 	
 	/**
