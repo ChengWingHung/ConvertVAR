@@ -9,6 +9,15 @@ import utils.ConvertLogUtil;
 import utils.ReactProcessUtil;
 import utils.TxtContentUtil;
 
+/**
+ * 
+ * @author 郑荣鸿（ChengWingHung）
+ * @date 20231116
+ * @description react类组件升级为函数组件处理类
+ * @version 1.0.0 beta
+ *
+ */
+
 public class ReactClassToFuncProcess {
 	
 	private static String parseFileName;// 当前要解析的文件名
@@ -152,6 +161,9 @@ public class ReactClassToFuncProcess {
 			if (tempText.indexOf("this.state") > -1) {
 				
 				tempText = tempText.substring(tempText.indexOf("this.state") + "this.state".length(), tempText.length());
+				
+				tempText = TxtContentUtil.getContentByTag(tempText, 0, '{', '}');
+				
 			} else {
 				// 无状态信息不需要处理
 				methodMap = new HashMap<>();
@@ -472,7 +484,7 @@ public class ReactClassToFuncProcess {
 		jsxContent = ReactProcessUtil.preReplaceThisOfReactClass(jsxContent, "", "");
 		
 		// 根节点<div></div> => <></> 待处理
-		
+		jsxContent = ReactProcessUtil.processJsxRootTag(jsxContent);
 		
 		// 生命周期函数
 		tempText = ReactProcessUtil.getLifecleMethod(classPropsResultMap);
@@ -497,8 +509,18 @@ public class ReactClassToFuncProcess {
 			
 			tempText = (String)parseResultMap.get("importDefine").get("contentValue");
 			
-			// 增加import 内容，引入hooks
+			String importHooks = "useState";
 			
+			if (importUseEffect) importHooks += ", useEffect";
+			
+			// 增加import 内容，引入hooks
+			tempText = ReactProcessUtil.processHooksImport(tempText, importHooks);
+			
+			// import ReactDOM from 'react-dom'
+			if (classPropsResultMap.containsKey(ConvertParam.ReactClassLifeMethodList[6])) {
+				
+				tempText = ReactProcessUtil.processReactDOMImport(tempText);
+			}
 			
 			parseReactResultContent = tempText + "\n" + parseReactResultContent;
 		}
@@ -506,7 +528,7 @@ public class ReactClassToFuncProcess {
 		// ReactDOM.memo
 		if (classPropsResultMap.containsKey(ConvertParam.ReactClassLifeMethodList[6])) {
 			
-			tempText = "const Memo" + fcName + "ReactDOM.memo(" + fcName + ");";
+			tempText = "const Memo" + fcName + " = ReactDOM.memo(" + fcName + ");";
 			
 			parseReactResultContent += tempText + "\n";
 			

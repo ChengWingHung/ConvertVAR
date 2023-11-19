@@ -387,12 +387,15 @@ public class ReactProcessUtil {
 				
 				endIndex = TxtContentUtil.getStatementEndIndex(tempText, 0);
 				
-				replaceContent = tempText.substring(0, endIndex);
+				replaceContent = tempText.substring(0, endIndex + 1);
 				
 				methodContent = methodContent.replace(replaceContent, "");
 			}
 			
-			clearBindThisInfo(methodContent);
+			methodContent = clearContructorStateAndProps(methodContent, "this.state");
+			methodContent = clearContructorStateAndProps(methodContent, "this.props");
+			
+			methodContent = clearBindThisInfo(methodContent);
 			
 			methodContent = findThisRefAndClearDefine(methodContent, "");
 			
@@ -408,7 +411,9 @@ public class ReactProcessUtil {
 			
 			tempText = replaceThisKeyWordOfMethod(tempText);
 			
-			willmoutMethod = tempText + "\n";
+			tempText = tempText.substring(1, tempText.length() - 1);
+			
+			willmoutMethod = tempText.trim() + "\n";
 		}
 		
 		if (classPropsResultMap.containsKey(ConvertParam.ReactClassLifeMethodList[2])) {
@@ -425,13 +430,13 @@ public class ReactProcessUtil {
 			
 			tempText = tempText.substring(1, tempText.length() - 1);
 			
-			// constructor content
-			if (!"".equals(methodContent)) tempText = methodContent + tempText;
-			
 			// willmount content
-			if (!"".equals(willmoutMethod)) tempText = willmoutMethod + tempText;
+			if (!"".equals(willmoutMethod)) tempText = willmoutMethod + "\n" + tempText.trim();
 			
-			didAndUnmoutMethod += tempText + "\n";
+			// constructor content
+			if (!"".equals(methodContent)) tempText = methodContent + "\n" + tempText.trim();
+			
+			didAndUnmoutMethod += tempText.trim() + "\n";
 			
 		}
 		
@@ -456,7 +461,7 @@ public class ReactProcessUtil {
 			
 			tempText = tempText.substring(1, tempText.length() - 1);
 			
-			didAndUnmoutMethod += tempText + "\n";
+			didAndUnmoutMethod += tempText.trim() + "\n";
 			
 			didAndUnmoutMethod += "}";
 			
@@ -502,7 +507,7 @@ public class ReactProcessUtil {
 			
 			tempText = tempText.substring(1, tempText.length() - 1);
 			
-			lifeMethod += tempText + "\n";
+			lifeMethod += tempText.trim() + "\n";
 			
 			lifeMethod += "},[ props ])\n";
 		}
@@ -519,7 +524,9 @@ public class ReactProcessUtil {
 			
 			tempText = TxtContentUtil.getContentByTag(tempText, 0, '{', '}');
 			
-			lifeMethod += tempText + "\n";
+			tempText = tempText.substring(1, tempText.length() - 1);
+			
+			lifeMethod += tempText.trim() + "\n";
 			
 			lifeMethod += "})\n";
 		}
@@ -617,6 +624,53 @@ public class ReactProcessUtil {
 	 * @param methodContent
 	 * @return
 	 */
+	public static String clearContructorStateAndProps(String methodContent, String type) {
+		
+		if (methodContent.indexOf(type) > -1) {
+			
+			replaceContent = "";
+			
+			String tempText = "";
+			
+			int endIndex = -1;
+			
+			tempText = methodContent.substring(methodContent.indexOf(type), methodContent.length());
+			
+			replaceContent = tempText;
+			
+			tempText = tempText.substring(type.length(), tempText.length());
+			
+			if ('=' == tempText.trim().charAt(0)) {
+				
+				tempText = tempText.substring(tempText.indexOf('=') + 1, tempText.length());
+				
+				if ('{' == tempText.trim().charAt(0)) {
+					
+					endIndex = TxtContentUtil.getTagEndIndex(tempText, '{', '}');
+					
+					endIndex += replaceContent.indexOf('=') + 1 + 1;
+				} else {
+					
+					endIndex = replaceContent.indexOf('=') + 1 + TxtContentUtil.getStatementEndIndex(tempText, 0);
+				}
+				
+				replaceContent = replaceContent.substring(0, endIndex + 1);
+				
+				methodContent = methodContent.replace(replaceContent, "");
+				
+			}		
+					
+		}
+		
+		return methodContent;
+	}
+	
+	/**
+	 * 
+	 * 
+	 * @param methodContent
+	 * @return
+	 */
 	public static String clearBindThisInfo(String methodContent) {
 		
 		replaceContent = "";
@@ -631,7 +685,7 @@ public class ReactProcessUtil {
 			
 			endIndex = 0;
 			
-			for (int k=tempText.length() - 1;k>-1;k++) {
+			for (int k=tempText.length() - 1;k>-1;k--) {
 				
 				if (k > 5 && "this.".equals(tempText.substring(k - 5, k))) {
 					
@@ -648,7 +702,7 @@ public class ReactProcessUtil {
 			
 			endIndex = TxtContentUtil.getStatementEndIndex(tempText, 0);
 			
-			replaceContent = tempText.substring(0, endIndex);
+			replaceContent = tempText.substring(0, endIndex + 1);
 			
 			methodContent = methodContent.replace(replaceContent, "");
 			
@@ -709,13 +763,13 @@ public class ReactProcessUtil {
 				m += endIndex;
 			} else if ('=' == methodContent.charAt(m)) {
 				
-				tempText = methodContent.substring(m, methodContent.length());
+				tempText = methodContent.substring(m + 1, methodContent.length());
 				
 				if (tempText.trim().indexOf("this") == 0 && tempText.trim().indexOf("this.") != 0 && tempText.trim().indexOf("this[") != 0) {
 					
 					endIndex = TxtContentUtil.getStatementEndIndex(tempText, 0);
 					
-					tempText = methodContent.substring(0, methodContent.indexOf("="));
+					tempText = methodContent.substring(0, m + 1);
 					
 					for (int k=tempText.length()-1;k>-1;k--) {
 						
@@ -730,9 +784,9 @@ public class ReactProcessUtil {
 						}
 					}
 					
-					replaceContent = methodContent.substring(startIndex, methodContent.indexOf("=") + endIndex + 1);
+					replaceContent = methodContent.substring(startIndex, m + 1 + endIndex + 1);
 					
-					thisRefName = tempText.substring(tempText.indexOf(" ") + 1, tempText.indexOf("=")).trim();
+					thisRefName = replaceContent.substring(replaceContent.indexOf(" ") + 1, replaceContent.indexOf("=")).trim();
 					
 					break;
 					
@@ -865,6 +919,115 @@ public class ReactProcessUtil {
 		}
 		
 		return currentMethodTxt;
+	}
+	
+	/**
+	 * 处理根节点
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String processJsxRootTag(String sourceText) {
+		
+		String tempText = sourceText.substring(sourceText.indexOf('(') + 1, sourceText.lastIndexOf(')'));
+		
+		replaceContent = tempText;
+		
+		tempText = tempText.trim();
+		
+		if (tempText.indexOf("<div") == 0) {
+			
+			tempText = tempText.substring("<div".length(), tempText.indexOf('>'));
+			
+			if ("".equals(tempText.trim())) {
+				
+				tempText = tempText.replace(tempText.substring(0, tempText.indexOf('>') + 1), "<>");
+				
+				tempText = tempText.substring(0, tempText.lastIndexOf("</div")) + tempText.substring(tempText.lastIndexOf("</div"), tempText.length()).replace("</div", "</");
+				
+				sourceText = sourceText.replace(replaceContent, tempText);
+			}
+		}
+		
+		return sourceText;
+	}
+	
+	/**
+	 * 处理hooks 引入
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String processReactDOMImport(String sourceText) {
+		
+		replaceContent = "";
+		
+		String fromKey = "";
+		String importContent = "";
+		
+		// 判断原先内容中是否有from 这个库，有则替换，无则插入
+		if (sourceText.indexOf(" from 'react-dom'") > -1) {
+			fromKey = " from 'react-dom'";
+		} else if (sourceText.indexOf(" from \"react-dom\"") > -1) {
+			fromKey = " from \"react-dom\"";
+		}
+		
+		if ("".equals(fromKey)) {
+			
+			importContent = "import ReactDOM from 'react-dom';\n";
+			
+			sourceText = importContent + sourceText;
+		}
+		
+		return sourceText;
+	}
+	
+	/**
+	 * 处理hooks 引入
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String processHooksImport(String sourceText, String importHooks) {
+		
+		replaceContent = "";
+		
+		String tempText = "";
+		String fromKey = "";
+		String importContent = "";
+		
+		// 判断原先内容中是否有from 这个库，有则替换，无则插入
+		if (sourceText.indexOf(" from 'react'") > -1) {
+			fromKey = " from 'react'";
+		} else if (sourceText.indexOf(" from \"react\"") > -1) {
+			fromKey = " from \"react\"";
+		}
+		
+		if (!"".equals(fromKey)) {
+			
+			tempText = sourceText.substring(0, sourceText.indexOf(fromKey));
+			
+			tempText = tempText.substring(tempText.lastIndexOf("import "), tempText.length());
+			
+			replaceContent = tempText;
+			
+			if (tempText.indexOf('}') > -1) {
+				
+				tempText = tempText.substring(0, tempText.indexOf('}')) + ", "  + importHooks + " " + tempText.substring(tempText.indexOf('}'), tempText.length());
+			} else {
+				
+				tempText += ", { " + importHooks + " }";
+			}
+			
+			sourceText = sourceText.replace(replaceContent, tempText);
+		} else {
+			
+			importContent = "import { " + importHooks + " } from 'react';\n";
+			
+			sourceText = importContent + sourceText;
+		}
+		
+		return sourceText;
 	}
 	
 	/**
