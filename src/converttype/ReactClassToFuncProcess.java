@@ -218,26 +218,6 @@ public class ReactClassToFuncProcess {
 	}
 	
 	/**
-	 * 得到生命周期信息
-	 * 
-	 * @param parseResultContent
-	 */
-	public static void getReactLifeCircleMethod(String parseResultContent) {
-		
-		
-	}
-	
-	/**
-	 * 得到生命周期外的函数信息
-	 * 
-	 * @param parseResultContent
-	 */
-	public static void getReactMethodInfo(String parseResultContent) {
-		
-		
-	}
-	
-	/**
 	 * 得到ReactDOM.render信息
 	 * 
 	 * @param parseResultContent
@@ -344,10 +324,11 @@ public class ReactClassToFuncProcess {
 			
 			tempText = ReactProcessUtil.preReplaceThisOfReactClass(tempText, "state.", fcState + ".");
 			tempText = ReactProcessUtil.preReplaceThisOfReactClass(tempText, "props.", "props.");
+			tempText = ReactProcessUtil.preReplaceThisOfReactClass(tempText, "", "");
 			
 			String renderContent = tempText;
 			
-			// 去除this.state 结构赋值信息
+			// 去除this.state 解构赋值信息
 			if (tempText.indexOf("this.state") > -1) {
 				
 				tempText = tempText.substring(tempText.indexOf("this.state"), tempText.length());
@@ -437,36 +418,41 @@ public class ReactClassToFuncProcess {
 				}
 			}
 			
-			ArrayList<String> variableNameList = new ArrayList<String>();
-			
-			// 除了state 和 props 外的变量部分处理为state 的变量
-			TxtContentUtil.getDefineVariable(renderContent, variableNameList);
-			
-			if (variableNameList.size() > 0) {
+			if (!"".equals(renderContent)) {
 				
 				tempText = "";
+				
+				ArrayList<String> variableNameList = new ArrayList<String>();
+				
+				// 除了state 和 props 外的变量部分处理为state 的变量
+				TxtContentUtil.getDefineVariable(renderContent, variableNameList);
 				
 				for(String defineVariable:variableNameList) {
 					
 					if (!"".equals(defineVariable)) {
 						
-						tempText += defineVariable + ",";
+						tempText += defineVariable + ", ";
 						
-						jsxContent = TxtContentUtil.replaceThisOfFrameWorkContent(jsxContent, "", defineVariable,  "", fcState + "." + defineVariable);
+						jsxContent = TxtContentUtil.replaceJsxContentStateVariable(jsxContent, defineVariable, fcState + "." + defineVariable);
 					}
 				}
 				
 				renderMethodName = fcName + "RenderMehod";
 				
-				renderMethodContent = "const " + renderMethodName + "=()=>{\n";
-				
-				renderMethodContent += renderContent.trim() + "\n";
-				
 				if (!"".equals(tempText)) {
 					
-					renderMethodReturnContent = tempText.substring(0, tempText.length() - 1);
+					renderMethodContent = "const " + renderMethodName + " = (" + fcState + ") => {\n";					
 					
-					renderMethodContent += "return {" + renderMethodReturnContent + "}\n";
+					renderMethodContent += renderContent.trim() + "\n";
+					
+					renderMethodReturnContent = tempText.substring(0, tempText.length() - 2);
+					
+					renderMethodContent += "return { " + renderMethodReturnContent + " };\n";
+				} else {
+					
+					renderMethodContent = "const " + renderMethodName + " = () => {\n";
+					
+					renderMethodContent += renderContent.trim() + "\n";
 				}
 				
 				renderMethodContent += "}\n";
@@ -478,6 +464,7 @@ public class ReactClassToFuncProcess {
 		ReactProcessUtil.classDataMap.put("fcState", fcState);
 		ReactProcessUtil.classDataMap.put("fcSetState", fcSetState);
 		ReactProcessUtil.classDataMap.put("renderMethodName", renderMethodName);
+		ReactProcessUtil.classDataMap.put("renderMethodReturnContent", renderMethodReturnContent);
 		
 		jsxContent = ReactProcessUtil.preReplaceThisOfReactClass(jsxContent, "state.", fcState + ".");
 		jsxContent = ReactProcessUtil.preReplaceThisOfReactClass(jsxContent, "props.", "props.");
@@ -485,6 +472,9 @@ public class ReactClassToFuncProcess {
 		
 		// 根节点<div></div> => <></> 待处理
 		jsxContent = ReactProcessUtil.processJsxRootTag(jsxContent);
+		
+		// setState 的回调是否有对应的函数
+		
 		
 		// 生命周期函数
 		tempText = ReactProcessUtil.getLifecleMethod(classPropsResultMap);

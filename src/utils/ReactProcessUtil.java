@@ -1,6 +1,5 @@
 package utils;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,7 +40,7 @@ public class ReactProcessUtil {
 					
 			methodContent = methodContent.substring(methodContent.indexOf(tempText) + tempText.length(), methodContent.length());
 			
-			methodDescription += tempText;
+			methodDescription += "\n" + tempText;
 		}
 		
 		methodContent = methodContent.trim();
@@ -330,6 +329,17 @@ public class ReactProcessUtil {
 	}
 	
 	/**
+	 * 获取方法中setState第二个参数有回调涉及函数的信息
+	 * 
+	 * @param classPropsResultMap
+	 * @return
+	 */
+	public static void getSetStateCallBackMethod(Map<String, Map<String, String>> classPropsResultMap, Map<String, String> callBackMethodMap) {
+		
+		
+	}
+	
+	/**
 	 * 获取react 生命周期升级为hooks 的处理结果
 	 * 
 	 * @param classPropsResultMap
@@ -463,7 +473,7 @@ public class ReactProcessUtil {
 			
 			didAndUnmoutMethod += tempText.trim() + "\n";
 			
-			didAndUnmoutMethod += "}";
+			didAndUnmoutMethod += "}\n";
 			
 			didAndUnmoutMethod += "},[])";
 			
@@ -850,11 +860,6 @@ public class ReactProcessUtil {
 			methodContent = preReplaceThisOfReactClass(methodContent, "setState", tempText);
 		} else {
 			
-			if (methodContent.indexOf("this.setState(") > -1) {
-				
-				methodContent = "let " + classDataMap.get("fcState") + "RenderStateData = "+ tempText + "();\n" + methodContent;
-			}
-			
 			methodContent = replaceClassSetStateContent(methodContent);
 		}
 		
@@ -882,9 +887,11 @@ public class ReactProcessUtil {
 	 */
 	public static String replaceClassSetStateContent(String currentMethodTxt) {
 		
-		replaceContent = "";
-		
 		String tempTxt = "";
+		String resultText = "";
+		String returnContent = "";
+		String originStateInfo = "";
+		String replaceStateInfo = "";
 		
 		int startIndex = -1;
 		int endIndex = -1;
@@ -895,27 +902,54 @@ public class ReactProcessUtil {
 			
 			startIndex = TxtContentUtil.getTagEndIndex(tempTxt, '(', ')');
 			
-			tempTxt = tempTxt.substring(0, startIndex);
+			tempTxt = tempTxt.substring(0, startIndex + 1);
 			
-			replaceContent = tempTxt;
+			returnContent = classDataMap.get("renderMethodReturnContent");
 			
 			if ('{' == tempTxt.substring(tempTxt.indexOf('(') + 1, tempTxt.length()).trim().charAt(0)) {
 				
 				endIndex = TxtContentUtil.getTagEndIndex(tempTxt, '{', '}');
 				
-				// 解构方式
-				tempTxt = tempTxt.substring(0, endIndex) + ", ..." + classDataMap.get("fcState") + "RenderStateData" + tempTxt.substring(endIndex, tempTxt.length());
+				if (!"".equals(returnContent)) {
+					
+					originStateInfo = tempTxt.substring(tempTxt.indexOf('{'), endIndex + 1);
+				}
+				
 			} else {
 				
-				String stateVariable = tempTxt.substring(tempTxt.indexOf('(') + 1, startIndex);
-				
-				// 合并处理
-				tempTxt = tempTxt.substring(0, tempTxt.indexOf('(') + 1) + "Object.assign(" + stateVariable + "," + classDataMap.get("fcState") + "RenderStateData" + ")" + tempTxt.substring(startIndex, tempTxt.length());
+				if (!"".equals(returnContent)) {
+					
+					originStateInfo = tempTxt.substring(tempTxt.indexOf('(') + 1, startIndex);
+				}
 			}
 			
-			tempTxt = tempTxt.replace("this.setState(", classDataMap.get("fcSetState"));
+			if (!"".equals(returnContent)) {
+				
+				resultText = currentMethodTxt.substring(0, currentMethodTxt.indexOf("this.setState(")) + "\n";
+				
+				resultText += "let renderMethodState = " + classDataMap.get("renderMethodName") + "({ ..." + classDataMap.get("fcState") + ", ..." + originStateInfo + "});\n";
+				
+				replaceStateInfo = "{ ..." + originStateInfo + ", ...renderMethodState }";
+				
+				tempTxt = currentMethodTxt.substring(currentMethodTxt.indexOf("this.setState("), currentMethodTxt.length());
+				
+				tempTxt = tempTxt.replace(originStateInfo, replaceStateInfo);
+			} else {
+				
+				resultText = currentMethodTxt.substring(0, currentMethodTxt.indexOf("this.setState(")) + "\n";
+				
+				resultText += classDataMap.get("renderMethodName") + "();\n";
+				
+				tempTxt = currentMethodTxt.substring(currentMethodTxt.indexOf("this.setState("), currentMethodTxt.length());
+			}
 			
-			return currentMethodTxt.substring(0, startIndex).replace(replaceContent, tempTxt) + replaceClassSetStateContent(currentMethodTxt.substring(startIndex, currentMethodTxt.length()));
+			tempTxt = tempTxt.replace("this.setState", classDataMap.get("fcSetState"));
+			
+			endIndex = resultText.length() + TxtContentUtil.getTagEndIndex(tempTxt, '{', '}') + 1;
+			
+			currentMethodTxt = resultText + tempTxt;
+			
+			return currentMethodTxt.substring(0, endIndex) + replaceClassSetStateContent(currentMethodTxt.substring(endIndex, currentMethodTxt.length()));
 		}
 		
 		return currentMethodTxt;
@@ -937,13 +971,11 @@ public class ReactProcessUtil {
 		
 		if (tempText.indexOf("<div") == 0) {
 			
-			tempText = tempText.substring("<div".length(), tempText.indexOf('>'));
-			
-			if ("".equals(tempText.trim())) {
+			if ("".equals(tempText.substring("<div".length(), tempText.indexOf('>')).trim())) {
 				
-				tempText = tempText.replace(tempText.substring(0, tempText.indexOf('>') + 1), "<>");
+				tempText = tempText.replace(tempText.substring(0, tempText.indexOf('>') + 1), "\n<>");
 				
-				tempText = tempText.substring(0, tempText.lastIndexOf("</div")) + tempText.substring(tempText.lastIndexOf("</div"), tempText.length()).replace("</div", "</");
+				tempText = tempText.substring(0, tempText.lastIndexOf("</div")) + tempText.substring(tempText.lastIndexOf("</div"), tempText.length()).replace("</div", "</") + "\n";
 				
 				sourceText = sourceText.replace(replaceContent, tempText);
 			}
@@ -1040,7 +1072,7 @@ public class ReactProcessUtil {
 		
 		sourceText = TxtContentUtil.clearLineStartBlankContent(sourceText);
 		
-		//sourceText = TxtContentUtil.processJSContentFormat(sourceText, 2);
+		sourceText = TxtContentUtil.processFileContentFormat(sourceText, 0);
 		
 		return sourceText;
 	}

@@ -378,6 +378,100 @@ public class TxtContentUtil {
 	}
 	
 	/**
+	 * 处理文件内容格式
+	 * 
+	 * @param sourceText 要处理js的内容
+	 * @param indentCount 添加的空格数
+	 * @return
+	 */
+	public static String processFileContentFormat(String fileContent, int indentCount) {
+		
+		// 不需要处理直接返回结果信息
+		if ("".equals(fileContent) || fileContent.indexOf('\n') < 0) {
+			
+			if (!"".equals(fileContent)) fileContent = getIndentCountResutl(indentCount) + fileContent;
+			
+			return fileContent;
+		}
+		
+		String tempText = "";
+		
+		// 先每行增加indentCount 数
+		if (indentCount != 0) {
+			
+			tempText = getIndentCountResutl(indentCount);
+			
+			String resultText = "";
+			
+			for (String lineContent:fileContent.split("\n")) {
+				
+				resultText += tempText + lineContent + "\n";
+			}
+			
+			fileContent = resultText;
+		}
+		
+		char startChar = ' ';
+		char endChar = ' ';
+		
+		int endIndex = -1;
+		
+		for (int n=0;n<fileContent.length();n++) {
+			
+			if ('(' == fileContent.charAt(n)) {
+				
+				startChar = '(';
+				endChar = ')';
+			} else if ('{' == fileContent.charAt(n)) {
+				
+				startChar = '{';
+				endChar = '}';
+			} else if ('[' == fileContent.charAt(n)) {
+				
+				startChar = '[';
+				endChar = ']';
+			}
+			
+			if (' ' != startChar) {
+				
+				tempText = fileContent.substring(n, fileContent.length());
+				
+				endIndex = getTagEndIndex(tempText, startChar, endChar) + 1;
+				
+				tempText = tempText.substring(0, endIndex);
+				
+				if (tempText.indexOf('\n') > -1) {
+					
+					n += tempText.indexOf('\n');
+					
+					endIndex = n + tempText.lastIndexOf('\n') - tempText.indexOf('\n');
+					
+					System.out.println(tempText);
+					
+					tempText = tempText.substring(tempText.indexOf('\n') + 1, tempText.lastIndexOf('\n'));
+					
+					tempText = processFileContentFormat(tempText, indentCount + 2);
+					
+					if ('\n' != tempText.charAt(tempText.length() - 1)) tempText += "\n";
+					
+					fileContent = fileContent.substring(0, n + 1) + tempText + fileContent.substring(endIndex + 1, fileContent.length());
+					
+					n += tempText.length();
+				} else {
+					
+					n += endIndex - 1;
+				}
+			}
+			
+			startChar = ' ';
+			endChar = ' ';
+		}
+		
+		
+		return fileContent;
+	}
+	
+	/**
 	 * 处理JS内容格式
 	 * 
 	 * @param sourceText 要处理js的内容
@@ -562,21 +656,89 @@ public class TxtContentUtil {
 			return;
 		}
 		
-		if (sourceText.indexOf(keyWord) == 0 && sourceText.length() > keyWord.length() && !String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) + keyWord.length() + 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
+		// 无对应关键信息
+		if (sourceText.indexOf(keyWord) < 0) return;
+			
+		
+		if (sourceText.indexOf(keyWord) == 0) {
+			
+			if (sourceText.length() == keyWord.length() || (sourceText.length() > keyWord.length() && !String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) + keyWord.length())).matches(ConvertParam.JS_VARIABLE_REG))) {
+				
+				keyWordIndex = startIndex + sourceText.indexOf(keyWord);
+			}
+		} else if (sourceText.indexOf(keyWord) == sourceText.length() - keyWord.length()) {
+			
+			if (!String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) - 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
+				
+				keyWordIndex = startIndex + sourceText.indexOf(keyWord);
+			}
+			
+		} else if (!String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) - 1)).matches(ConvertParam.JS_VARIABLE_REG) && !String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) + keyWord.length())).matches(ConvertParam.JS_VARIABLE_REG)) {
 			
 			keyWordIndex = startIndex + sourceText.indexOf(keyWord);
-		} else if (sourceText.indexOf(keyWord) == sourceText.length() - keyWord.length() && !String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) - 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
-			
-			keyWordIndex = startIndex + sourceText.indexOf(keyWord);
-		} else if (sourceText.indexOf(keyWord) > -1 && !String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) - 1)).matches(ConvertParam.JS_VARIABLE_REG) && !String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) + keyWord.length() + 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
-			
-			keyWordIndex = startIndex + sourceText.indexOf(keyWord);
-		} else if (sourceText.indexOf(keyWord) > -1) {
+		}
+		
+		if (keyWordIndex == -1) {
 			
 			startIndex += sourceText.indexOf(keyWord) + keyWord.length();
 			
-			isKeyWordExist(processContentTxt, keyWord, startIndex);
+			dataDescription = processContentTxt.substring(startIndex, processContentTxt.length());
+					
+			if (dataDescription.indexOf(keyWord) > -1) isKeyWordExist(processContentTxt, keyWord, startIndex);
 		}
+		
+	}
+	
+	/**
+	 * 替换内容中的this 信息
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String replaceJsxContentStateVariable(String jsxContent, String KeyWord, String replaceKeyWord) {
+		
+		String tempText = "";
+		String processContent = "";
+		
+		int endIndex = -1;
+		
+		// 找到{} 中的变量再判断
+		if (jsxContent.indexOf('{') > -1) {
+			
+			tempText = jsxContent.substring(jsxContent.indexOf('{'), jsxContent.length());
+			
+			endIndex = getTagEndIndex(tempText, '{', '}') + 1;
+			
+			tempText = tempText.substring(0, endIndex);
+			
+			processContent = tempText;
+			
+			tempText = replaceAll(tempText, KeyWord, replaceKeyWord);
+			
+			return jsxContent.substring(0, jsxContent.indexOf(processContent)) + tempText + replaceJsxContentStateVariable(jsxContent.substring(jsxContent.indexOf(processContent) + processContent.length(), jsxContent.length()), KeyWord, replaceKeyWord);
+		}
+		
+		return jsxContent;
+	}
+	
+	/**
+	 * 替换内容中的所有关键字
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String replaceAll(String sourceText, String KeyWord, String replaceKeyWord) {
+		
+		int endIndex = -1;
+		
+		endIndex = getKeyWordIndex(sourceText, KeyWord);
+		
+		if (endIndex != -1) {
+			
+			return sourceText.substring(0, endIndex) + replaceKeyWord + replaceAll(sourceText.substring(endIndex + KeyWord.length(), sourceText.length()), KeyWord, replaceKeyWord);
+		}
+		
+		return sourceText;
 	}
 	
 	/**
@@ -652,9 +814,9 @@ public class TxtContentUtil {
 			return;
 		}
 		
-		sourceText = getDefineVariableAndClearDefine(sourceText, "const ", variableNameList);
-		sourceText = getDefineVariableAndClearDefine(sourceText, "var ", variableNameList);
-		sourceText = getDefineVariableAndClearDefine(sourceText, "let ", variableNameList);
+		sourceText = getDefineVariableAndClearDefine(sourceText, "const", variableNameList);
+		sourceText = getDefineVariableAndClearDefine(sourceText, "var", variableNameList);
+		sourceText = getDefineVariableAndClearDefine(sourceText, "let", variableNameList);
 	}
 	
 	public static String getDefineVariableAndClearDefine(String sourceText, String variableType, ArrayList<String> variableNameList) {
@@ -670,13 +832,13 @@ public class TxtContentUtil {
 			
 			tempTxt = sourceText.substring(startIndex, sourceText.length());
 			
-			defineContent = tempTxt.substring(0, getStatementEndIndex(tempTxt, 0));
+			defineContent = tempTxt.substring(0, getStatementEndIndex(tempTxt, 0) + 1);
 			
-			startIndex = getNotVariableIndex(tempTxt, variableType.length());
+			startIndex = getNotVariableIndex(tempTxt, variableType.length() + 1);
 			
 			tempTxt = tempTxt.substring(variableType.length(), startIndex);
 			
-			variableNameList.add(tempTxt);
+			variableNameList.add(tempTxt.trim());
 			
 			sourceText = sourceText.replace(defineContent, "");
 		}
@@ -685,7 +847,7 @@ public class TxtContentUtil {
 		
 		if (startIndex != -1) {
 			
-			getDefineVariableAndClearDefine(sourceText, variableType, variableNameList);
+			getDefineVariableAndClearDefine(sourceText.trim(), variableType, variableNameList);
 		}
 		
 		return sourceText;
