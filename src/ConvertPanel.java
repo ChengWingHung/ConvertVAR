@@ -27,7 +27,7 @@ import java.util.Date;
 public class ConvertPanel extends JFrame {
 
 	/**
-	 * 前端框架vue和react版本升级及两大框架之间相互转换为新版本处理工具
+	 * 前端框架vue和react版本升级处理工具
 	 * 
 	 * @author 郑荣鸿（ChengWingHung）
 	 * @date 20231010 21:00:00

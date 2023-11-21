@@ -43,7 +43,11 @@ public class ReactClassToFuncProcess {
 		
 		ReactProcessUtil.classDataMap = new HashMap<>();
 		
+		ReactProcessUtil.callBackMethodMap = new HashMap<>();
+		
 		ConvertLogUtil.printConvertLog("info", "解析前：\n" + parseResultContent);
+		
+		parseResultContent = getReactFormCreateContent(parseResultContent);
 		
 		getImportAndDefineContent(parseResultContent);
 		
@@ -114,6 +118,8 @@ public class ReactClassToFuncProcess {
 		
 		parseResultMap.put("className", classNameMap);
 		
+		ReactProcessUtil.classDataMap.put("fcName", tempText);
+		
 		parseResultContent = parseResultContent.substring(startIndex, parseResultContent.length());
 		
 		// :React.FC<IProps>
@@ -142,10 +148,11 @@ public class ReactClassToFuncProcess {
 	public static void getReactStateInfo(String parseResultContent) {
 		
 		String tempText = "";
+		String stateResultText = "";
 		
 		Map<String, String> methodMap = new HashMap<>();
 		
-		// 先判断是否有state 不在constructor 中定义的内容，否则在constructor 中拿
+		// 先判断是否有state 不在constructor 中定义的内容，否则在constructor 中取值
 		if (classPropsResultMap.containsKey("state")) {
 			
 			methodMap = classPropsResultMap.get("state");
@@ -178,7 +185,15 @@ public class ReactClassToFuncProcess {
 			
 			Map<String, String> stateDetailMap = new HashMap<>();
 			
-			stateDetailMap.put("stateValue", tempText);
+			stateResultText = tempText;
+			
+			// 是否需要插入回调函数标志
+			if (ReactProcessUtil.callBackMethodMap.size() > 0) {
+				
+				stateResultText = stateResultText.substring(0, stateResultText.indexOf('{') + 1) + "\n" + parseResultMap.get("className").get("contentValue") + "SetStateCallBackFlg:'0',\n" + stateResultText.substring(stateResultText.indexOf('{') + 1, stateResultText.length());
+			}
+			
+			stateDetailMap.put("stateValue", stateResultText);
 			
 			parseResultMap.put("state", stateDetailMap);
 		}
@@ -215,6 +230,50 @@ public class ReactClassToFuncProcess {
 				parseResultMap.put("props", propsDetailMap);
 			}
 		}
+	}
+	
+	/**
+	 * 
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String getReactFormCreateContent(String parseResultContent) {
+		
+		String formCreateContent = ReactProcessUtil.getReactFormCreateContent(parseResultContent);
+		
+		if (!"".equals(formCreateContent)) {
+			
+			parseResultContent = parseResultContent.replace(formCreateContent, "");
+			
+			Map<String, String> formCreateMap = new HashMap<>();
+			
+			formCreateMap.put("formContent", formCreateContent);
+			
+			String tempText = formCreateContent.substring(formCreateContent.indexOf("Form.create(") + "Form.create(".length(), formCreateContent.length());
+			
+			if ('{' == tempText.trim().charAt(0)) {
+				
+				tempText = tempText.substring(tempText.indexOf('{'), tempText.length());
+				
+				tempText = tempText.substring(0, TxtContentUtil.getTagEndIndex(tempText, '{', '}') + 1);
+				
+				if ("".equals(tempText.trim())) {
+					
+					formCreateMap.put("formOption", "");
+				} else {
+					
+					formCreateMap.put("formOption", tempText);
+				}
+			} else {
+				
+				formCreateMap.put("formOption", "");
+			}
+			
+			parseResultMap.put("formCreate", formCreateMap);
+		}
+		
+		return parseResultContent;
 	}
 	
 	/**
@@ -272,9 +331,7 @@ public class ReactClassToFuncProcess {
 		String fcState = "";
 		String fcSetState = "";
 		String jsxContent = "";
-		String renderMethodName = "";
 		String renderMethodContent = "";
-		String renderMethodReturnContent = "";
 		String parseReactResultContent = "";
 		
 		int endIndex = -1;
@@ -296,6 +353,9 @@ public class ReactClassToFuncProcess {
 		fcState = String.valueOf(fcName.charAt(0)).toLowerCase() +  fcName.substring(1, fcName.length()) + "State";
 		
 		fcSetState = "set" + fcName + "State";
+		
+		ReactProcessUtil.classDataMap.put("fcState", fcState);
+		ReactProcessUtil.classDataMap.put("fcSetState", fcSetState);
 		
 		parseReactResultContent += "const [" + fcState + ", " + fcSetState + "] = useState(";
 		
@@ -326,145 +386,24 @@ public class ReactClassToFuncProcess {
 			tempText = ReactProcessUtil.preReplaceThisOfReactClass(tempText, "props.", "props.");
 			tempText = ReactProcessUtil.preReplaceThisOfReactClass(tempText, "", "");
 			
-			String renderContent = tempText;
-			
-			// 去除this.state 解构赋值信息
-			if (tempText.indexOf("this.state") > -1) {
-				
-				tempText = tempText.substring(tempText.indexOf("this.state"), tempText.length());
-				
-				endIndex = tempText.indexOf("this.state") + TxtContentUtil.getStatementEndIndex(tempText, 0);
-				
-				tempText = renderContent.substring(0, endIndex);
-				
-				endIndex = -1;
-				
-				for (int j=tempText.length() - 1;j>-1;j--) {
-					
-					// let const var
-					if (j > 4 && "const".equals(tempText.substring(j-5, j))) {
-						
-						endIndex = j-5;
-						break;
-					} else if (j > 2 && ("let".equals(tempText.substring(j-3, j)) || "var".equals(tempText.substring(j-3, j)))) {
-						
-						endIndex = j-3;
-						break;
-					}
-				}
-				
-				if (endIndex == -1) endIndex = 0;
-				
-				tempText = tempText.substring(endIndex, tempText.length());
-				
-				renderContent = renderContent.replace(tempText, "");
-				
-				// 拿到变量
-				tempText = TxtContentUtil.getContentByTag(tempText, 0, '{', '}');
-				
-				// renderContent 和 jsxContent 涉及到的state变量替换
-				for(String stateVariable:tempText.split(",")) {
-					
-					if (!"".equals(stateVariable)) {
-						
-						renderContent = TxtContentUtil.replaceThisOfFrameWorkContent(renderContent, "", stateVariable,  "", fcState + "." + stateVariable);
-						jsxContent = TxtContentUtil.replaceThisOfFrameWorkContent(jsxContent, "", stateVariable,  "", fcState + "." + stateVariable);
-					}
-				}
-			}
-			
-			// 去除this.props 结构赋值信息
-			if (tempText.indexOf("this.props") > -1) {
-				
-				tempText = tempText.substring(tempText.indexOf("this.props"), tempText.length());
-				
-				endIndex = tempText.indexOf("this.props") + TxtContentUtil.getStatementEndIndex(tempText, 0);
-				
-				tempText = renderContent.substring(0, endIndex);
-				
-				endIndex = -1;
-				
-				for (int j=tempText.length() - 1;j>-1;j--) {
-					
-					// let const var
-					if (j > 4 && "const".equals(tempText.substring(j-5, j))) {
-						
-						endIndex = j-5;
-						break;
-					} else if (j > 2 && ("let".equals(tempText.substring(j-3, j)) || "var".equals(tempText.substring(j-3, j)))) {
-						
-						endIndex = j-3;
-						break;
-					}
-				}
-				
-				if (endIndex == -1) endIndex = 0;
-				
-				tempText = tempText.substring(endIndex, tempText.length());
-				
-				renderContent = renderContent.replace(tempText, "");
-				
-				// 拿到变量
-				tempText = TxtContentUtil.getContentByTag(tempText, 0, '{', '}');
-				
-				// renderContent 和 jsxContent 涉及到的props变量替换
-				for(String propsVariable:tempText.split(",")) {
-					
-					if (!"".equals(propsVariable)) {
-						
-						renderContent = TxtContentUtil.replaceThisOfFrameWorkContent(renderContent, "", propsVariable,  "", "props." + propsVariable);
-						jsxContent = TxtContentUtil.replaceThisOfFrameWorkContent(jsxContent, "", propsVariable,  "", "props." + propsVariable);
-					}
-				}
-			}
-			
-			if (!"".equals(renderContent)) {
-				
-				tempText = "";
-				
-				ArrayList<String> variableNameList = new ArrayList<String>();
-				
-				// 除了state 和 props 外的变量部分处理为state 的变量
-				TxtContentUtil.getDefineVariable(renderContent, variableNameList);
-				
-				for(String defineVariable:variableNameList) {
-					
-					if (!"".equals(defineVariable)) {
-						
-						tempText += defineVariable + ", ";
-						
-						jsxContent = TxtContentUtil.replaceJsxContentStateVariable(jsxContent, defineVariable, fcState + "." + defineVariable);
-					}
-				}
-				
-				renderMethodName = fcName + "RenderMehod";
-				
-				if (!"".equals(tempText)) {
-					
-					renderMethodContent = "const " + renderMethodName + " = (" + fcState + ") => {\n";					
-					
-					renderMethodContent += renderContent.trim() + "\n";
-					
-					renderMethodReturnContent = tempText.substring(0, tempText.length() - 2);
-					
-					renderMethodContent += "return { " + renderMethodReturnContent + " };\n";
-				} else {
-					
-					renderMethodContent = "const " + renderMethodName + " = () => {\n";
-					
-					renderMethodContent += renderContent.trim() + "\n";
-				}
-				
-				renderMethodContent += "}\n";
-			}
-			
+			renderMethodContent = tempText;
 		}
 		
-		ReactProcessUtil.classDataMap.put("fcName", fcName);
-		ReactProcessUtil.classDataMap.put("fcState", fcState);
-		ReactProcessUtil.classDataMap.put("fcSetState", fcSetState);
-		ReactProcessUtil.classDataMap.put("renderMethodName", renderMethodName);
-		ReactProcessUtil.classDataMap.put("renderMethodReturnContent", renderMethodReturnContent);
+		// 生命周期函数
+		tempText = ReactProcessUtil.getLifecleMethod(classPropsResultMap);
+		
+		if (!"".equals(tempText) || ReactProcessUtil.callBackMethodMap.size() > 0) importUseEffect = true;
+		
+		parseReactResultContent += tempText;
+		
+		// 普通函数
+		parseReactResultContent += ReactProcessUtil.getClassNormalMethod(classPropsResultMap);
+		
+		// setState 回调函数
+		parseReactResultContent += ReactProcessUtil.getSetStateCallBackMethod();
+		
+		// render mehod
+		if (!"".equals(renderMethodContent)) parseReactResultContent += "\n" + renderMethodContent + "\n";
 		
 		jsxContent = ReactProcessUtil.preReplaceThisOfReactClass(jsxContent, "state.", fcState + ".");
 		jsxContent = ReactProcessUtil.preReplaceThisOfReactClass(jsxContent, "props.", "props.");
@@ -472,22 +411,6 @@ public class ReactClassToFuncProcess {
 		
 		// 根节点<div></div> => <></> 待处理
 		jsxContent = ReactProcessUtil.processJsxRootTag(jsxContent);
-		
-		// setState 的回调是否有对应的函数
-		
-		
-		// 生命周期函数
-		tempText = ReactProcessUtil.getLifecleMethod(classPropsResultMap);
-		
-		if (!"".equals(tempText)) importUseEffect = true;
-		
-		parseReactResultContent += tempText;
-		
-		// 普通函数
-		parseReactResultContent += ReactProcessUtil.getClassNormalMethod(classPropsResultMap);
-		
-		// render mehod
-		if (!"".equals(renderMethodContent)) parseReactResultContent += renderMethodContent;
 		
 		// return jsx 
 		parseReactResultContent += jsxContent + "\n";
@@ -515,6 +438,16 @@ public class ReactClassToFuncProcess {
 			parseReactResultContent = tempText + "\n" + parseReactResultContent;
 		}
 		
+		String formOption = "";
+		String formCreateContent = "";
+		
+		// form 表单部分是否用到了Form.create并判断options
+		if (parseResultMap.containsKey("formCreate")) {
+			
+			formOption = (String)parseResultMap.get("formCreate").get("formOption");
+			formCreateContent = (String)parseResultMap.get("formCreate").get("formContent");
+		}
+		
 		// ReactDOM.memo
 		if (classPropsResultMap.containsKey(ConvertParam.ReactClassLifeMethodList[6])) {
 			
@@ -522,20 +455,78 @@ public class ReactClassToFuncProcess {
 			
 			parseReactResultContent += tempText + "\n";
 			
-			parseReactResultContent += "\n" + "export default Memo" + fcName + ";\n";
-			
 			if (parseResultMap.containsKey("domRender")) {
 				
-				parseReactResultContent += String.valueOf(parseResultMap.get("domRender").get("renderContent")).replace(fcName, "Memo" + fcName);
+				if ("".equals(formCreateContent)) {
+					
+					parseReactResultContent += String.valueOf(parseResultMap.get("domRender").get("renderContent")).replace(fcName, "Memo" + fcName);
+				} else {
+					
+					if ("".equals(formOption)) {
+						
+						parseReactResultContent += "const FormMemo" + fcName + " = Form.create()(Memo" + fcName + ");";
+					} else {
+						
+						parseReactResultContent += "const FormMemo" + fcName + " = Form.create(" + formOption + ")(Memo" + fcName + ");";
+					}
+					
+					parseReactResultContent += String.valueOf(parseResultMap.get("domRender").get("renderContent")).replace(fcName, "FormMemo" + fcName);
+				}
+				
+			} else {
+				
+				if ("".equals(formCreateContent)) {
+					
+					parseReactResultContent += "\n" + "export default Memo" + fcName + ";\n";
+				} else {
+					
+					if ("".equals(formOption)) {
+						
+						parseReactResultContent += "const FormMemo" + fcName + " = Form.create()(Memo" + fcName + ");";
+					} else {
+						
+						parseReactResultContent += "const FormMemo" + fcName + " = Form.create(" + formOption + ")(Memo" + fcName + ");";
+					}
+					
+					parseReactResultContent += "\n" + "export default FormMemo" + fcName + ";\n";
+				}
 			}
 		} else if (parseResultMap.containsKey("domRender")) {
 			
-			parseReactResultContent += "\n" + "export default " + fcName + ";\n";
+			if ("".equals(formCreateContent)) {
+				
+				parseReactResultContent += parseResultMap.get("domRender").get("renderContent");
+			} else {
+				
+				if ("".equals(formOption)) {
+					
+					parseReactResultContent += "const Form" + fcName + " = Form.create()(" + fcName + ");";
+				} else {
+					
+					parseReactResultContent += "const Form" + fcName + " = Form.create(" + formOption + ")(" + fcName + ");";
+				}
+				
+				parseReactResultContent += String.valueOf(parseResultMap.get("domRender").get("renderContent")).replace(fcName, "Form" + fcName);
+			}
 			
-			parseReactResultContent += parseResultMap.get("domRender").get("renderContent");
 		} else {
 			
-			parseReactResultContent += "\n" + "export default " + fcName + ";\n";
+			if ("".equals(formCreateContent)) {
+				
+				parseReactResultContent += "\n" + "export default " + fcName + ";\n";
+			} else {
+				
+				if ("".equals(formOption)) {
+					
+					parseReactResultContent += "const Form" + fcName + " = Form.create()(" + fcName + ");";
+				} else {
+					
+					parseReactResultContent += "const Form" + fcName + " = Form.create(" + formOption + ")(" + fcName + ");";
+				}
+				
+				parseReactResultContent += "\n" + "export default Form" + fcName + ";\n";
+			}
+			
 		}
 		
 		return parseReactResultContent;

@@ -1,5 +1,6 @@
 package utils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -12,6 +13,12 @@ public class ReactProcessUtil {
 	}
 	
 	public static Map<String, String> classDataMap;
+	
+	public static Map<String, Map<String, String>> callBackMethodMap;
+	
+	private static ArrayList<String> variableNameList;
+	
+	private static int callBackCount = 0;
 	
 	private static String replaceContent = "";
 	
@@ -107,6 +114,10 @@ public class ReactProcessUtil {
 				
 				methodContent = methodContent.substring(endIndex, methodContent.length());
 			}
+			
+			variableNameList = new ArrayList<String>();
+			// 处理methodBody是否有this.setState的第二个参数
+			methodBody = getSetStateCallBackMethodInfo(methodBody);
 			
 			// 组装方法信息到map对象
 			Map<String, String> methodMap = new HashMap<>();
@@ -331,12 +342,181 @@ public class ReactProcessUtil {
 	/**
 	 * 获取方法中setState第二个参数有回调涉及函数的信息
 	 * 
-	 * @param classPropsResultMap
+	 * @param sourceText
 	 * @return
 	 */
-	public static void getSetStateCallBackMethod(Map<String, Map<String, String>> classPropsResultMap, Map<String, String> callBackMethodMap) {
+	public static String getSetStateCallBackMethodInfo(String sourceText) {
 		
+		if (sourceText.indexOf("this.setState(") < 0) return sourceText;
 		
+		replaceContent = "";
+		
+		String tempText = "";
+		String setStateType = "";
+		String setStateText = "";
+		String processResultText = "";
+		
+		int startIndex = -1;
+		int endIndex = -1;
+		
+		tempText = sourceText.substring(sourceText.indexOf("this.setState("), sourceText.length());
+		
+		endIndex = TxtContentUtil.getTagEndIndex(tempText, '(', ')');
+		
+		replaceContent = tempText.substring(0, endIndex + 1);
+		
+		startIndex = sourceText.indexOf("this.setState(") + endIndex + 1;
+		
+		tempText = tempText.substring(tempText.indexOf('(') + 1, endIndex + 1).trim();
+		
+		if ('{' == tempText.charAt(0)) {
+			
+			endIndex = TxtContentUtil.getTagEndIndex(tempText, '{', '}');
+			
+			setStateText = tempText.substring(tempText.indexOf('{') + 1, endIndex);
+			
+			tempText = tempText.substring(endIndex + 1, tempText.length());
+			
+			setStateType = "1";
+		} else {
+			
+			endIndex = TxtContentUtil.getNotVariableIndex(tempText, 0);
+			
+			setStateText = tempText.substring(0, endIndex);
+			
+			tempText = tempText.substring(endIndex, tempText.length());
+			
+			setStateType = "2";
+		}
+		
+		tempText = tempText.trim();
+		
+		// 说明有回调函数处理，再判断是调用的已有方法还是新写的
+		if (',' == tempText.charAt(0)) {
+			
+			String fcName = classDataMap.get("fcName");
+			
+			TxtContentUtil.getDefineVariable(sourceText.substring(0, sourceText.indexOf("this.setState(")), variableNameList);
+			
+			tempText = tempText.substring(0, tempText.lastIndexOf(')'));
+			
+			processResultText = sourceText.substring(0, startIndex);
+
+			processResultText = processResultText.substring(0, processResultText.lastIndexOf(tempText))	+ processResultText.substring(processResultText.lastIndexOf(tempText) + tempText.length(), processResultText.length());	
+			
+			++callBackCount;
+			
+			if ("1".equals(setStateType)) {
+				
+				String variableNameText = "";
+				
+				for (String variableName:variableNameList) {
+					
+					variableNameText += variableName + ", ";
+				}
+				
+				if (!"".equals(variableNameText)) {
+					
+					variableNameText = variableNameText.substring(0, variableNameText.length() - 2);
+					
+					if (',' == setStateText.trim().charAt(setStateText.trim().length() - 1)) {
+						
+						variableNameText = ", " + variableNameText;
+					}
+				}
+				
+				processResultText = processResultText.substring(0, processResultText.lastIndexOf(setStateText))	+ fcName + "SetStateCallBackFlg:'" + callBackCount + "', "+ setStateText + variableNameText + processResultText.substring(processResultText.lastIndexOf(setStateText) + setStateText.length(), processResultText.length());	
+			} else {
+				
+				processResultText = processResultText.substring(0, processResultText.lastIndexOf("this.setState(")) + "\n";
+				
+				processResultText += setStateText + "." + fcName + "SetStateCallBackFlg = '" + callBackCount + "';\n";
+				
+				for (String variableName:variableNameList) {
+					
+					processResultText += setStateText + "." + variableName + " = " + variableName + ";\n";
+				}
+						
+				processResultText += processResultText.substring(processResultText.lastIndexOf("this.setState("), processResultText.length());
+			}
+			
+			String fcState = String.valueOf(fcName.charAt(0)).toLowerCase() +  fcName.substring(1, fcName.length()) + "State";
+			
+			// 处理回调函数
+			tempText = tempText.substring(tempText.indexOf("=>") + 2, tempText.length());
+			
+			tempText = preReplaceThisOfReactClass(tempText, "state.", fcState + ".");
+			tempText = preReplaceThisOfReactClass(tempText, "props.", "props.");
+			tempText = preReplaceThisOfReactClass(tempText, "", "");
+			
+			for (String defineVariable:variableNameList) {
+				
+				tempText = replaceCallBackContentStateVariable(tempText, defineVariable, fcState + "." + defineVariable);
+			}
+			
+			Map<String, String> callBackMap = new HashMap<>();
+			
+			callBackMap.put("funcName", "setStateCallBack" + callBackCount);// 函数名
+			callBackMap.put("funcBody", tempText);// 函数体
+			callBackMap.put("funcCallFlg", fcName + "SetStateCallBackFlg");// 调用标志
+			callBackMap.put("funcCallFlgValue", "" + callBackCount);// 标志字段
+			
+			callBackMethodMap.put("setStateCallBack" + callBackCount, callBackMap);
+		}
+		
+		tempText = sourceText.substring(startIndex, sourceText.length());
+		
+		if (tempText.indexOf("this.setState(") > -1) {
+			
+			return processResultText + getSetStateCallBackMethodInfo(tempText);
+		} else {
+			
+			return processResultText + tempText;
+		}
+	}
+	
+	public static String replaceCallBackContentStateVariable(String methodContent, String defineVariable, String replaceStateVariable) {
+		
+		int endIndex = TxtContentUtil.getKeyWordIndex(methodContent, defineVariable);
+		
+		if (endIndex != -1) {
+			
+			String tempText = "";
+			
+			tempText = methodContent.substring(0, endIndex).trim();
+			
+			// const var let 定义部分无需替换
+			if (tempText.indexOf("const") == (tempText.length() - 6) || tempText.indexOf("var") == (tempText.length() - 3) || tempText.indexOf("let") == (tempText.length() - 3)) {
+				
+				return methodContent.substring(0, endIndex + defineVariable.length()) + replaceCallBackContentStateVariable(methodContent.substring(endIndex + defineVariable.length(), methodContent.length()), defineVariable, replaceStateVariable);
+			} else {
+				
+				return methodContent.substring(0, endIndex) + replaceStateVariable + replaceCallBackContentStateVariable(methodContent.substring(endIndex + defineVariable.length(), methodContent.length()), defineVariable, replaceStateVariable);
+			}
+		}
+		
+		return methodContent;
+	}
+	
+	/**
+	 * 获取react 涉及setstate回调函数处理结果
+	 * 
+	 * @return
+	 */
+	public static String getSetStateCallBackMethod() {
+		
+		String methodResult = "";
+		
+		Map<String, String> callBackMap;
+		
+		for (Map.Entry<String, Map<String, String>> entry : callBackMethodMap.entrySet()) {
+			
+			callBackMap = entry.getValue();
+			
+			methodResult += "const " + callBackMap.get("funcName") + " = (" + classDataMap.get("fcState") + ") => " + callBackMap.get("funcBody") + ";\n";
+		}
+		
+		return methodResult;
 	}
 	
 	/**
@@ -485,6 +665,27 @@ public class ReactProcessUtil {
 		if (!"".equals(didAndUnmoutMethod)) {
 			
 			lifeMethod += didAndUnmoutMethod + "\n";
+		}
+		
+		// setstate callback
+		if (callBackMethodMap.size() > 0) {
+			
+			Map<String, String> callBackMap;
+			
+			tempText = classDataMap.get("fcName") + "SetStateCallBackFlg";
+			
+			lifeMethod += "useEffect(()=>{\n";
+			
+			for (Map.Entry<String, Map<String, String>> entry : callBackMethodMap.entrySet()) {
+				
+				callBackMap = entry.getValue();
+				
+				lifeMethod += "if (" + classDataMap.get("fcState") + "." + tempText + " === '" + callBackMap.get("funcCallFlgValue") + "') " + callBackMap.get("funcName") + "(" + classDataMap.get("fcState") + ");\n";
+			}
+			
+			lifeMethod += classDataMap.get("fcState") + "." + tempText + " = \"0\";\n";
+			
+			lifeMethod += "},[ " + classDataMap.get("fcState") + " ])\n";
 		}
 		
 		if (classPropsResultMap.containsKey(ConvertParam.ReactClassLifeMethodList[4])) {
@@ -783,12 +984,12 @@ public class ReactProcessUtil {
 					
 					for (int k=tempText.length()-1;k>-1;k--) {
 						
-						if (k > 6 && "const ".equals(tempText.substring(k-6, k))) {
+						if (k > 5 && "const ".equals(tempText.substring(k-6, k))) {
 							startIndex = k-6;
 							break;
 						}
 						
-						if (k > 4 && ("var ".equals(tempText.substring(k-4, k)) || "let ".equals(tempText.substring(k-4, k)))) {
+						if (k > 3 && ("var ".equals(tempText.substring(k-4, k)) || "let ".equals(tempText.substring(k-4, k)))) {
 							startIndex = k-4;
 							break;
 						}
@@ -805,6 +1006,66 @@ public class ReactProcessUtil {
 		}
 			
 		return thisRefName;
+	}
+	
+	/**
+	 * 
+	 * 
+	 * @param sourceText
+	 * @return
+	 */
+	public static String getReactFormCreateContent(String sourceText) {
+		
+		String tempText = "";
+		
+		int startIndex = -1;
+		
+		startIndex = TxtContentUtil.getKeyWordIndex(sourceText, "Form.create(");
+		
+		if (startIndex == -1) return "";
+		
+		String resultText = "";
+		
+		int endIndex = startIndex;
+		
+		tempText = sourceText.substring(startIndex, sourceText.length());
+		
+		startIndex = TxtContentUtil.getTagEndIndex(tempText, '(', ')');
+		
+		resultText = tempText.substring(0, startIndex + 1);
+		
+		tempText = sourceText.substring(startIndex + endIndex + 1, sourceText.length());
+		
+		startIndex = TxtContentUtil.getTagEndIndex(tempText, '(', ')');
+		
+		resultText += tempText.substring(0, startIndex + 1);
+		
+		tempText = tempText.substring(startIndex + 1, tempText.length());
+		
+		startIndex = TxtContentUtil.getStatementEndIndex(tempText, 0);
+		
+		resultText += tempText.substring(0, startIndex);
+		
+		tempText = sourceText.substring(0, endIndex);
+		
+		startIndex = -1;
+		
+		for (int k=tempText.length()-1;k>-1;k--) {
+			
+			if (k > 5 && "const ".equals(tempText.substring(k-6, k))) {
+				startIndex = k-6;
+				break;
+			}
+			
+			if (k > 3 && ("var ".equals(tempText.substring(k-4, k)) || "let ".equals(tempText.substring(k-4, k)))) {
+				startIndex = k-4;
+				break;
+			}
+		}
+		
+		if (startIndex != -1) resultText = tempText.substring(startIndex, tempText.length()) + resultText;
+		
+		return resultText;
 	}
 	
 	/**
@@ -850,18 +1111,10 @@ public class ReactProcessUtil {
 		
 		methodContent = preReplaceThisOfReactClass(methodContent, "state.", tempText + ".");
 		
-		// 3. this.setState => renderMethodName() + fcSetState + renderMethodReturnContent
-		tempText = classDataMap.get("renderMethodName");
+		// 3. this.setState => fcSetState
+		tempText = classDataMap.get("fcSetState");
 		
-		if ("".equals(tempText)) {
-			
-			tempText = classDataMap.get("fcSetState");
-			
-			methodContent = preReplaceThisOfReactClass(methodContent, "setState", tempText);
-		} else {
-			
-			methodContent = replaceClassSetStateContent(methodContent);
-		}
+		methodContent = preReplaceThisOfReactClass(methodContent, "setState", tempText);
 		
 		// 4. this.props => props
 		methodContent = preReplaceThisOfReactClass(methodContent, "props.", "props.");

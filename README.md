@@ -1,6 +1,6 @@
 # ConvertVAR
 ## description
-前端框架vue和react版本升级及两大框架之间相互转换为新版本处理工具
+前端框架vue和react版本升级处理工具
 ## author 
 ChengWingHung
 ## date
@@ -15,5 +15,3 @@ react 不同版本之间或者两个框架之间的迭代升级需要投入大�
 本软件功能主要涵盖以下部分：
 1. vue2 升级 vue3；
 2. react 类组件升级为函数组件；
-3. react 类组件或者函数组件迭代为 vue3；
-4. vue2 迭代为 react 函数组件；

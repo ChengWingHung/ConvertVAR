@@ -446,8 +446,6 @@ public class TxtContentUtil {
 					
 					endIndex = n + tempText.lastIndexOf('\n') - tempText.indexOf('\n');
 					
-					System.out.println(tempText);
-					
 					tempText = tempText.substring(tempText.indexOf('\n') + 1, tempText.lastIndexOf('\n'));
 					
 					tempText = processFileContentFormat(tempText, indentCount + 2);
@@ -759,7 +757,7 @@ public class TxtContentUtil {
 			tempTxt = currentMethodTxt.substring(0, currentMethodTxt.indexOf(thisKeyWord + KeyWord));
 			
 			// 如果前一个字符也是符合变量定义，则说明不是
-			if (String.valueOf(tempTxt.charAt(tempTxt.length() - 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
+			if (!"".equals(tempTxt) && String.valueOf(tempTxt.charAt(tempTxt.length() - 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
 				
 				startIndex = currentMethodTxt.indexOf(thisKeyWord + KeyWord) + (thisKeyWord + KeyWord).length();
 				
