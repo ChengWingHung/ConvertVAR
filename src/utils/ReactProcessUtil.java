@@ -391,6 +391,8 @@ public class ReactProcessUtil {
 		
 		tempText = tempText.trim();
 		
+		processResultText = sourceText.substring(0, startIndex);
+		
 		// 说明有回调函数处理，再判断是调用的已有方法还是新写的
 		if (',' == tempText.charAt(0)) {
 			
@@ -399,8 +401,6 @@ public class ReactProcessUtil {
 			TxtContentUtil.getDefineVariable(sourceText.substring(0, sourceText.indexOf("this.setState(")), variableNameList);
 			
 			tempText = tempText.substring(0, tempText.lastIndexOf(')'));
-			
-			processResultText = sourceText.substring(0, startIndex);
 
 			processResultText = processResultText.substring(0, processResultText.lastIndexOf(tempText))	+ processResultText.substring(processResultText.lastIndexOf(tempText) + tempText.length(), processResultText.length());	
 			

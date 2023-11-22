@@ -676,7 +676,7 @@ public class Vue2ToVue3Process {
 				
 			}
 			
-			tempText = "const state = reactive({\n" + apiTempText + "});\n" + tempText;
+			tempText = "// 推荐使用ref" + ConvertParam.RECOMMEND_BY_CONVERTVAR + "\n" + "const state = reactive({\n" + apiTempText + "});\n" + tempText;
 		}
 		
 		// 处理setup 中需要增加的定义信息

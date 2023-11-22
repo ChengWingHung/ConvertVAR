@@ -440,7 +440,7 @@ public class TxtContentUtil {
 				
 				tempText = tempText.substring(0, endIndex);
 				
-				if (tempText.indexOf('\n') > -1) {
+				if (tempText.indexOf('\n') > -1 && tempText.lastIndexOf('\n') > tempText.indexOf('\n')) {
 					
 					n += tempText.indexOf('\n');
 					
