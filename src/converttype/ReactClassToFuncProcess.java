@@ -447,10 +447,10 @@ public class ReactClassToFuncProcess {
 			formCreateContent = (String)parseResultMap.get("formCreate").get("formContent");
 		}
 		
-		// ReactDOM.memo
+		// React.memo
 		if (classPropsResultMap.containsKey(ConvertParam.ReactClassLifeMethodList[6])) {
 			
-			tempText = "const Memo" + fcName + " = ReactDOM.memo(" + fcName + ");";
+			tempText = "const Memo" + fcName + " = React.memo(" + fcName + ");";
 			
 			parseReactResultContent += tempText + "\n";
 			
