@@ -360,11 +360,11 @@ public class ConvertPanel extends JFrame {
     		parseResultFileContent = ReactClassToFuncProcess.parseReactFileContent(resultFileName, fileContentValue);
     	} else if (processFileTypeIndex == 3) {
     		
-    		// vue2 => react function
+    		// vue2 => react function 预留
     		parseResultFileContent = Vue2ToReactFuncProcess.parseVue2FileContent(resultFileName, fileContentValue);
     	} else if (processFileTypeIndex == 4) {
     		
-    		// react class => vue3
+    		// react class => vue3 预留
     		parseResultFileContent = ReactClassToVue3Process.parseReactFileContent(resultFileName, fileContentValue);
     	}
 		

@@ -645,18 +645,22 @@ public class TxtContentUtil {
 	 */
 	public static void isKeyWordExist(String processContentTxt,String keyWord, int startIndex) {
 		
+		String tempTxt = "";
 		String dataDescription = "";
 		String sourceText = processContentTxt.substring(startIndex, processContentTxt.length());
 		
 		// 先获取注释信息
 		dataDescription = getCommentInformation(sourceText);
 		
-		sourceText = sourceText.substring(sourceText.indexOf(dataDescription) + dataDescription.length(), sourceText.length()).trim();
+		sourceText = sourceText.substring(sourceText.indexOf(dataDescription) + dataDescription.length(), sourceText.length());
+		
+		tempTxt = sourceText.trim();
 		
 		startIndex += dataDescription.length();
 		
 		// 还有注释信息，继续清除
-		if (sourceText.indexOf("<--") == 0 || sourceText.indexOf("/**") == 0 || sourceText.indexOf("//") == 0) {
+		if (tempTxt.indexOf("<--") == 0 || tempTxt.indexOf("/**") == 0 || tempTxt.indexOf("//") == 0) {
+			startIndex += sourceText.indexOf(tempTxt.substring(0, 2));
 			isKeyWordExist(processContentTxt, keyWord, startIndex);
 			return;
 		}

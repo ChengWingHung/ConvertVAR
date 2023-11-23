@@ -359,8 +359,8 @@ public class ReactClassToFuncProcess {
 			
 			tempText = tempText.trim();
 			
-			tempText = ReactProcessUtil.preReplaceThisOfReactClass(tempText, "state.", fcState + ".");
-			tempText = ReactProcessUtil.preReplaceThisOfReactClass(tempText, "props.", "props.");
+			tempText = ReactProcessUtil.preReplaceThisOfReactClass(tempText, "state", fcState);
+			tempText = ReactProcessUtil.preReplaceThisOfReactClass(tempText, "props", "props");
 			tempText = ReactProcessUtil.preReplaceThisOfReactClass(tempText, "", "");
 			
 			renderMethodContent = tempText;
@@ -382,8 +382,8 @@ public class ReactClassToFuncProcess {
 		// render mehod
 		if (!"".equals(renderMethodContent)) parseReactResultContent += "\n" + renderMethodContent + "\n";
 		
-		jsxContent = ReactProcessUtil.preReplaceThisOfReactClass(jsxContent, "state.", fcState + ".");
-		jsxContent = ReactProcessUtil.preReplaceThisOfReactClass(jsxContent, "props.", "props.");
+		jsxContent = ReactProcessUtil.preReplaceThisOfReactClass(jsxContent, "state", fcState);
+		jsxContent = ReactProcessUtil.preReplaceThisOfReactClass(jsxContent, "props", "props");
 		jsxContent = ReactProcessUtil.preReplaceThisOfReactClass(jsxContent, "", "");
 		
 		// 根节点<div></div> => <></> 待处理

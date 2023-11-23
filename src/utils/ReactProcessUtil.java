@@ -116,6 +116,9 @@ public class ReactProcessUtil {
 				methodContent = methodContent.substring(endIndex, methodContent.length());
 			}
 			
+			// 处理this 别名引用
+			methodBody = findThisRefAndClearDefine(methodBody, "this");
+			
 			variableNameList = new ArrayList<String>();
 			// 处理methodBody是否有this.setState的第二个参数
 			methodBody = getSetStateCallBackMethodInfo(methodBody);
@@ -130,7 +133,7 @@ public class ReactProcessUtil {
 			
 			methodResultMap.put(methodName, methodMap);
 			
-			// 第一个如果是冒号
+			// 第一个如果是封号
 			if (methodContent.indexOf(';') == 0) methodContent = methodContent.substring(1, methodContent.length()).trim();
 			
 			getMethodResultMap(methodContent, "", methodResultMap);
@@ -447,8 +450,8 @@ public class ReactProcessUtil {
 			// 处理回调函数
 			tempText = tempText.substring(tempText.indexOf("=>") + 2, tempText.length());
 			
-			tempText = preReplaceThisOfReactClass(tempText, "state.", fcState + ".");
-			tempText = preReplaceThisOfReactClass(tempText, "props.", "props.");
+			tempText = preReplaceThisOfReactClass(tempText, "state", fcState);
+			tempText = preReplaceThisOfReactClass(tempText, "props", "props");
 			tempText = preReplaceThisOfReactClass(tempText, "", "");
 			
 			for (String defineVariable:variableNameList) {
@@ -588,8 +591,6 @@ public class ReactProcessUtil {
 			methodContent = clearContructorStateAndProps(methodContent, "this.props");
 			
 			methodContent = clearBindThisInfo(methodContent);
-			
-			methodContent = findThisRefAndClearDefine(methodContent, "");
 			
 		}
 		
@@ -941,14 +942,7 @@ public class ReactProcessUtil {
 		
 		replaceContent = "";
 		
-		String tempText = findReactClassThisRef(methodContent);
-		
-		if (!"".equals(tempText)) {
-			
-			methodContent = methodContent.replace(replaceContent, "");
-			
-			methodContent = methodContent.replaceAll(tempText + ".", replaceTxt);
-		}
+		methodContent = findReactClassThisRef(methodContent, replaceTxt);
 					
 		return methodContent;
 	}
@@ -959,7 +953,7 @@ public class ReactProcessUtil {
 	 * @param methodContent
 	 * @return String
 	 */
-	public static String findReactClassThisRef(String methodContent) {
+	public static String findReactClassThisRef(String methodContent, String replaceTxt) {
 		
 		String tempText = "";
 		String thisRefName = "";
@@ -975,7 +969,14 @@ public class ReactProcessUtil {
 				
 				endIndex = TxtContentUtil.getTagEndIndex(tempText, '{', '}');
 				
+				tempText = tempText.substring(1, endIndex);
+				
+				replaceContent = "";
+				
+				methodContent = methodContent.substring(0, m + 1) + findReactClassThisRef(tempText, replaceTxt) + methodContent.substring(m + endIndex, methodContent.length());
+				
 				m += endIndex;
+				
 			} else if ('=' == methodContent.charAt(m)) {
 				
 				tempText = methodContent.substring(m + 1, methodContent.length());
@@ -1003,13 +1004,16 @@ public class ReactProcessUtil {
 					
 					thisRefName = replaceContent.substring(replaceContent.indexOf(" ") + 1, replaceContent.indexOf("=")).trim();
 					
-					break;
+					methodContent = methodContent.replace(replaceContent, "");
 					
+					methodContent = TxtContentUtil.replaceAll(methodContent, thisRefName, replaceTxt);
+					
+					break;
 				}
 			}
 		}
 			
-		return thisRefName;
+		return methodContent;
 	}
 	
 	/**
@@ -1108,12 +1112,12 @@ public class ReactProcessUtil {
 		String tempText = "";
 		
 		// 1. this 别名引用更回
-		methodContent = findThisRefAndClearDefine(methodContent, "this.");
+		// methodContent = findThisRefAndClearDefine(methodContent, "this.");
 		
 		// 2. this.state => fcState
 		tempText = classDataMap.get("fcState");
 		
-		methodContent = preReplaceThisOfReactClass(methodContent, "state.", tempText + ".");
+		methodContent = preReplaceThisOfReactClass(methodContent, "state", tempText);
 		
 		// 3. this.setState => fcSetState
 		tempText = classDataMap.get("fcSetState");
@@ -1121,7 +1125,7 @@ public class ReactProcessUtil {
 		methodContent = preReplaceThisOfReactClass(methodContent, "setState", tempText);
 		
 		// 4. this.props => props
-		methodContent = preReplaceThisOfReactClass(methodContent, "props.", "props.");
+		methodContent = preReplaceThisOfReactClass(methodContent, "props", "props");
 		
 		// 5. this. => ""
 		methodContent = preReplaceThisOfReactClass(methodContent, "", "");
