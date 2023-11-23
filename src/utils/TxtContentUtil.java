@@ -20,7 +20,7 @@ public class TxtContentUtil {
 	 * @param sourceText
 	 * @param propsName
 	 * @param endProps
-	 * @return
+	 * @return String
 	 */
 	public static String getHtmlTagProps(String sourceText, String propsName, String endProps) {
 		
@@ -37,7 +37,7 @@ public class TxtContentUtil {
 	 * @param sourceText
 	 * @param propsName
 	 * @param endProps
-	 * @return
+	 * @return String
 	 */
 	public static String clearHtmlTagProps(String sourceText, String propsName, String endProps) {
 		
@@ -55,7 +55,7 @@ public class TxtContentUtil {
 	 * @param sourceText
 	 * @param startTag
 	 * @param endTag
-	 * @return
+	 * @return int
 	 */
 	public static int getTagEndIndex(String sourceText, char startTag, char endTag) {
 		
@@ -93,7 +93,8 @@ public class TxtContentUtil {
 	 * 获取语句结束索引
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @param startIndex
+	 * @return int
 	 */
 	public static int getStatementEndIndex(String sourceText, int startIndex) {
 		
@@ -120,7 +121,8 @@ public class TxtContentUtil {
 	 * 删除第一个为逗号的字符
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @param startIndex
+	 * @return String
 	 */
 	public static String deleteFirstComma(String sourceText, int startIndex) {
 		
@@ -140,7 +142,7 @@ public class TxtContentUtil {
 	 * @param startInex 截取开始位置
 	 * @param startTag 起始标签
 	 * @param endTag 结束标签
-	 * @return
+	 * @return String
 	 */
 	public static String getContentByTag(String sourceText, int startInex, char startTag, char endTag) {
 		
@@ -159,7 +161,7 @@ public class TxtContentUtil {
 	 * 清理整行为空的内容
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @return String
 	 */
 	public static String clearBlankContentInLine(String sourceText) {
 		
@@ -197,7 +199,7 @@ public class TxtContentUtil {
 	 * 获取注释信息部分
 	 * 
 	 * @param sourceText
-	 * @return 注释信息内容
+	 * @return String 注释信息内容
 	 */
 	public static String getCommentInformation(String sourceText) {
 		
@@ -242,7 +244,8 @@ public class TxtContentUtil {
 	 * 得到符合变量命名位置的索引
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @param startIndex
+	 * @return int
 	 */
 	public static int getVariableStartIndex(String sourceText, int startIndex) {
 		
@@ -263,7 +266,8 @@ public class TxtContentUtil {
 	 * 得到不是变量命名位置的索引
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @param startIndex
+	 * @return int
 	 */
 	public static int getNotVariableIndex(String sourceText, int startIndex) {
 		
@@ -286,7 +290,7 @@ public class TxtContentUtil {
 	 * @param sourceText 要处理的内容
 	 * @param fileType 文件类型
 	 * @param framworkName 来自vue 还是react
-	 * @return
+	 * @return String
 	 */
 	public static String processFileContentFormat(String sourceText, String fileType, String framworkName) {
 		
@@ -350,7 +354,7 @@ public class TxtContentUtil {
 	 * 清空每行的头部空格部分
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @return String
 	 */
 	public static String clearLineStartBlankContent(String sourceText) {
 		
@@ -382,7 +386,7 @@ public class TxtContentUtil {
 	 * 
 	 * @param sourceText 要处理js的内容
 	 * @param indentCount 添加的空格数
-	 * @return
+	 * @return String
 	 */
 	public static String processFileContentFormat(String fileContent, int indentCount) {
 		
@@ -474,7 +478,7 @@ public class TxtContentUtil {
 	 * 
 	 * @param sourceText 要处理js的内容
 	 * @param indentCount 添加的空格数
-	 * @return
+	 * @return String
 	 */
 	public static String processJSContentFormat(String sourceText, int indentCount) {
 		
@@ -545,8 +549,8 @@ public class TxtContentUtil {
 	/**
 	 * 添加空格
 	 * 
-	 * @param sourceText
-	 * @return
+	 * @param indentCount
+	 * @return String
 	 */
 	public static String getIndentCountResutl(int indentCount) {
 		
@@ -563,7 +567,7 @@ public class TxtContentUtil {
 	 * 按命名规则重命名变量，不符合部分直接剔除
 	 * 
 	 * @param variableName 变量名
-	 * @return
+	 * @return String
 	 */
 	public static String reNameVariable(String variableName) {
 		
@@ -584,7 +588,8 @@ public class TxtContentUtil {
 	 * 获取字符串信息开始的索引
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @param tagName
+	 * @return int
 	 */
 	public static int getStringStartIndex(String sourceText, String tagName) {
 		
@@ -601,7 +606,7 @@ public class TxtContentUtil {
 	/**
 	 * 获取当前年月日
 	 * 
-	 * @return
+	 * @return String
 	 */
 	public static String getCurrentYYYYMMDD() {
 		
@@ -619,7 +624,8 @@ public class TxtContentUtil {
 	 * 判断是否有某个字符标志并返回对应索引值
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @param keyWord
+	 * @return int
 	 */
 	public static int getKeyWordIndex(String sourceText,String keyWord) {
 		
@@ -633,8 +639,9 @@ public class TxtContentUtil {
 	/**
 	 * 判断是否有某个字符标志并返回对应索引值
 	 * 
-	 * @param sourceText
-	 * @return
+	 * @param processContentTxt
+	 * @param keyWord
+	 * @param startIndex
 	 */
 	public static void isKeyWordExist(String processContentTxt,String keyWord, int startIndex) {
 		
@@ -690,8 +697,10 @@ public class TxtContentUtil {
 	/**
 	 * 替换内容中的this 信息
 	 * 
-	 * @param sourceText
-	 * @return
+	 * @param jsxContent
+	 * @param KeyWord
+	 * @param replaceKeyWord
+	 * @return String
 	 */
 	public static String replaceJsxContentStateVariable(String jsxContent, String KeyWord, String replaceKeyWord) {
 		
@@ -723,7 +732,9 @@ public class TxtContentUtil {
 	 * 替换内容中的所有关键字
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @param KeyWord
+	 * @param replaceKeyWord
+	 * @return String
 	 */
 	public static String replaceAll(String sourceText, String KeyWord, String replaceKeyWord) {
 		
@@ -743,7 +754,11 @@ public class TxtContentUtil {
 	 * 替换内容中的this 信息
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @param thisKeyWord
+	 * @param KeyWord
+	 * @param replaceKeyWord
+	 * @param wordType
+	 * @return String
 	 */
 	public static String replaceThisOfFrameWorkContent(String sourceText, String thisKeyWord, String KeyWord, String replaceKeyWord, String wordType) {
 		
@@ -795,7 +810,7 @@ public class TxtContentUtil {
 	 * 获取所有定义的变量信息
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @param variableNameList
 	 */
 	public static void getDefineVariable(String sourceText, ArrayList<String> variableNameList) {
 		
@@ -849,21 +864,6 @@ public class TxtContentUtil {
 		}
 		
 		return sourceText;
-	}
-	
-	/**
-	 * 获取语句有实际字符开始的索引
-	 * 
-	 * @param sourceText
-	 * @return
-	 */
-	public static int getStatementStartIndex(String sourceText) {
-		
-		int startIndex = 0;
-		
-		
-		
-		return startIndex;
 	}
 	
 }

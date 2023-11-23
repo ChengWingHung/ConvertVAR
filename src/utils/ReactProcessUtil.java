@@ -26,7 +26,8 @@ public class ReactProcessUtil {
 	 * 获取组件中所有方法信息
 	 * 
 	 * @param methodContent
-	 * @return
+	 * @param methodDescription
+	 * @param methodResultMap
 	 */ 
 	public static void getMethodResultMap(String methodContent, String methodDescription, Map<String, Map<String, String>> methodResultMap){
 		
@@ -141,7 +142,8 @@ public class ReactProcessUtil {
 	 * 获取对象属性及其所有信息
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @param recordPropertyMap
+	 * @param findIndex
 	 */
 	public static void getPropertyDetailOfObject(String sourceText, Map<String, Map<String, String>> recordPropertyMap, int findIndex) {
 		
@@ -343,7 +345,7 @@ public class ReactProcessUtil {
 	 * 获取方法中setState第二个参数有回调涉及函数的信息
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @return String
 	 */
 	public static String getSetStateCallBackMethodInfo(String sourceText) {
 		
@@ -501,7 +503,7 @@ public class ReactProcessUtil {
 	/**
 	 * 获取react 涉及setstate回调函数处理结果
 	 * 
-	 * @return
+	 * @return String
 	 */
 	public static String getSetStateCallBackMethod() {
 		
@@ -523,7 +525,7 @@ public class ReactProcessUtil {
 	 * 获取react 生命周期升级为hooks 的处理结果
 	 * 
 	 * @param classPropsResultMap
-	 * @return
+	 * @return String
 	 */
 	public static String getLifecleMethod(Map<String, Map<String, String>> classPropsResultMap) {
 		
@@ -749,7 +751,7 @@ public class ReactProcessUtil {
 	 * 获取react class 组件除了生命周期函数外的其他函数
 	 * 
 	 * @param classPropsResultMap
-	 * @return
+	 * @return String
 	 */
 	public static String getClassNormalMethod(Map<String, Map<String, String>> classPropsResultMap) {
 		
@@ -830,10 +832,11 @@ public class ReactProcessUtil {
 	}
 	
 	/**
-	 * 
+	 * 处理构造函数内容
 	 * 
 	 * @param methodContent
-	 * @return
+	 * @param type
+	 * @return String
 	 */
 	public static String clearContructorStateAndProps(String methodContent, String type) {
 		
@@ -877,10 +880,10 @@ public class ReactProcessUtil {
 	}
 	
 	/**
-	 * 
+	 * 清除bind（this）内容
 	 * 
 	 * @param methodContent
-	 * @return
+	 * @return String
 	 */
 	public static String clearBindThisInfo(String methodContent) {
 		
@@ -931,7 +934,8 @@ public class ReactProcessUtil {
 	 * 是否有 let /const /var xxx = this
 	 * 
 	 * @param methodContent
-	 * @return
+	 * @param replaceTxt
+	 * @return String
 	 */
 	public static String findThisRefAndClearDefine(String methodContent, String replaceTxt) {
 		
@@ -950,10 +954,10 @@ public class ReactProcessUtil {
 	}
 	
 	/**
-	 * 
+	 * this 的引用信息
 	 * 
 	 * @param methodContent
-	 * @return
+	 * @return String
 	 */
 	public static String findReactClassThisRef(String methodContent) {
 		
@@ -1009,10 +1013,10 @@ public class ReactProcessUtil {
 	}
 	
 	/**
-	 * 
+	 * 获取Form.create 内容
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @return String
 	 */
 	public static String getReactFormCreateContent(String sourceText) {
 		
@@ -1069,10 +1073,10 @@ public class ReactProcessUtil {
 	}
 	
 	/**
-	 * 
+	 * 得到ReactDOM.render信息
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @return String
 	 */
 	public static String getReactRenderIndex(String sourceText) {
 		
@@ -1097,7 +1101,7 @@ public class ReactProcessUtil {
 	 * 处理方法体中的this
 	 * 
 	 * @param methodContent
-	 * @return
+	 * @return String
 	 */
 	public static String replaceThisKeyWordOfMethod(String methodContent) {
 		
@@ -1136,7 +1140,7 @@ public class ReactProcessUtil {
 	 * 替换内容中的this.setState 信息并增加renderMethod及返回信息
 	 * 
 	 * @param currentMethodTxt
-	 * @return
+	 * @return String
 	 */
 	public static String replaceClassSetStateContent(String currentMethodTxt) {
 		
@@ -1212,7 +1216,7 @@ public class ReactProcessUtil {
 	 * 处理根节点
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @return String
 	 */
 	public static String processJsxRootTag(String sourceText) {
 		
@@ -1241,7 +1245,7 @@ public class ReactProcessUtil {
 	 * 处理hooks 引入
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @return String
 	 */
 	public static String processReactDOMImport(String sourceText) {
 		
@@ -1271,7 +1275,8 @@ public class ReactProcessUtil {
 	 * 处理hooks 引入
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @param importHooks
+	 * @return String
 	 */
 	public static String processHooksImport(String sourceText, String importHooks) {
 		
@@ -1319,7 +1324,7 @@ public class ReactProcessUtil {
 	 * 处理文件格式
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @return String
 	 */
 	public static String processFileContentFormat(String sourceText) {
 		
@@ -1334,7 +1339,7 @@ public class ReactProcessUtil {
 	 * 判断文件内容是否是react class 组件
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @return Boolean
 	 */
 	public static Boolean isReactClassFileContent(String sourceText) {
 		

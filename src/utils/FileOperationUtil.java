@@ -7,9 +7,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.channels.FileChannel;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 
 public class FileOperationUtil {
@@ -30,7 +28,7 @@ public class FileOperationUtil {
 	 * 获取指定文件夹下的所有文件
 	 * 
 	 * @param fileDir
-	 * @return
+	 * @return ArrayList<String>
 	 */
 	public static ArrayList<String> getProcessFileList(File fileDir) {
 		
@@ -45,7 +43,6 @@ public class FileOperationUtil {
 	 * 递归获取文件信息
 	 * 
 	 * @param fileDir
-	 * @return
 	 */
 	private static void getDirectoryFileList(File fileDir) {
 		
@@ -66,6 +63,8 @@ public class FileOperationUtil {
 	/**
 	 * 获取文件类型
 	 * 
+	 * @param fileDir
+	 * @return String
 	 */
 	public static String getFileType(String fileName) {
 		
@@ -75,6 +74,9 @@ public class FileOperationUtil {
 	/**
 	 * 先创建所有解析后的文件
 	 * 
+	 * @param savePathDir
+	 * @param fileList
+	 * @throws IOException
 	 */
 	public static void createResultFileList(String savePathDir, ArrayList<String> fileList) throws IOException {
 		
@@ -95,6 +97,9 @@ public class FileOperationUtil {
 	/**
 	 * 创建文件
 	 * 
+	 * @param savePathDir
+	 * @param filePath
+	 * @throws IOException
 	 */
 	public static void createResultFile(String savePathDir, String filePath) throws IOException{
 		
@@ -130,7 +135,7 @@ public class FileOperationUtil {
 	 * 读取文件内容
 	 * 
 	 * @param file
-	 * @return
+	 * @return String
 	 * @throws IOException
 	 */
 	public static String readFileUsingInputStream(File file) throws IOException
@@ -163,6 +168,10 @@ public class FileOperationUtil {
 	/**
 	 * 将内容写入文件
 	 * 
+	 * @param filePath
+	 * @param fileContent
+	 * @param append
+	 * 
 	 */
 	public static void writeContentIntoFile(String filePath, String fileContent, Boolean append) {
 		
@@ -193,6 +202,10 @@ public class FileOperationUtil {
 	/**
 	 * 拷贝文件
 	 * 
+	 * @param copyFileList
+	 * @param selectedFileDir
+	 * @param outPutFileDir
+	 * 
 	 */
 	public static void copySourceFileList(ArrayList<String> copyFileList, String selectedFileDir, String outPutFileDir) {
 		
@@ -218,6 +231,9 @@ public class FileOperationUtil {
 	/**
 	 * 拷贝文件
 	 * 
+	 * @param sourceFilePath
+	 * @param distinctFilePath
+	 * @throws IOException
 	 */
 	public static void copySourceFile(String sourceFilePath, String distinctFilePath) throws IOException {
 	    
@@ -243,6 +259,8 @@ public class FileOperationUtil {
 	/**
 	 * 打印日志信息到本地
 	 * 
+	 * @param logContent
+	 * 
 	 */
 	public static void printToolLogs(String logContent) {
 		
@@ -266,13 +284,5 @@ public class FileOperationUtil {
 		} catch(IOException err) {
 			
 		}
-	}
-	
-	/**
-	 * 生成tar包
-	 * 
-	 */
-	public static void generateTarFile() {
-		
 	}
 }

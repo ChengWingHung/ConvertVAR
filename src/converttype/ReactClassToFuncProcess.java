@@ -9,11 +9,11 @@ import utils.ReactProcessUtil;
 import utils.TxtContentUtil;
 
 /**
+ * react类组件升级为函数组件处理类
  * 
  * @author 郑荣鸿（ChengWingHung）
- * @date 20231116
- * @description react类组件升级为函数组件处理类
- * @version 1.0.0 beta
+ * @date 20231116 19:00:00 - 20231123 19:45:00
+ * @version 1.0.0
  *
  */
 
@@ -100,6 +100,7 @@ public class ReactClassToFuncProcess {
 	 * 得到class 类名
 	 * 
 	 * @param parseResultContent
+	 * @return String
 	 */
 	public static String getReactClassName(String parseResultContent) {
 		
@@ -232,10 +233,10 @@ public class ReactClassToFuncProcess {
 	}
 	
 	/**
+	 * 得到Form.create 内容
 	 * 
-	 * 
-	 * @param sourceText
-	 * @return
+	 * @param parseResultContent
+	 * @return String
 	 */
 	public static String getReactFormCreateContent(String parseResultContent) {
 		
@@ -296,30 +297,9 @@ public class ReactClassToFuncProcess {
 	}
 	
 	/**
-	 * 得到return 的jsx 内容
-	 * 
-	 * @param parseResultContent
-	 */
-	public static void getReactReturnJSXContent(String parseResultContent) {
-		
-		String tempText = "";
-		
-		Map<String, String> methodMap = new HashMap<>();
-		
-		if (classPropsResultMap.containsKey(ConvertParam.ReactClassLifeMethodList[8])) {
-			
-			methodMap = classPropsResultMap.get(ConvertParam.ReactClassLifeMethodList[8]);
-			
-			tempText = methodMap.get("methodBody");
-			
-			
-		}
-	}
-	
-	/**
 	 * 组装react function 的内容
 	 * 
-	 * @param parseResultContent
+	 * @return String
 	 */
 	public static String getAssembleReactFuncContent() {
 		
@@ -332,8 +312,6 @@ public class ReactClassToFuncProcess {
 		String jsxContent = "";
 		String renderMethodContent = "";
 		String parseReactResultContent = "";
-		
-		int endIndex = -1;
 		
 		parseReactResultContent = "function ";
 		

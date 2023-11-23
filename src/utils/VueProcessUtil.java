@@ -17,7 +17,8 @@ public class VueProcessUtil {
 	 * 处理vue2 props信息
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @param propsResultMap
+	 * @param propDescription
 	 */
 	public static void processVuePropsInfo(String sourceText, Map<String, Map<String, String>> propsResultMap, String propDescription) {
 		
@@ -69,7 +70,7 @@ public class VueProcessUtil {
 	 * 处理vue2 data信息
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @param stateDataResultMap
 	 */
 	public static void processVueDataInfo(String sourceText, Map<String, String> stateDataResultMap) {
 		
@@ -184,8 +185,9 @@ public class VueProcessUtil {
 	 * @param sourceText
 	 * @param thisKeyWord this标志
 	 * @param KeyWord 属性值
+	 * @param replaceKeyWord
 	 * @param wordType 是state还是props
-	 * @return 替换后信息
+	 * @return String 替换后信息
 	 */
 	public static String replaceThisOfVue2Method(String sourceText, String thisKeyWord, String KeyWord, String replaceKeyWord, String wordType) {
 		
@@ -198,7 +200,7 @@ public class VueProcessUtil {
 	 * .sync 的部分并将其替换为 v-model
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @return String
 	 */
 	public static String replaceSyncPropsToVmodel(String sourceText) {
 		
@@ -239,7 +241,7 @@ public class VueProcessUtil {
 	 * vue2的key 值转换处理，<template v-for> 子节点的key 需要绑定到template 上
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @return String
 	 */
 	public static String changeTemplateKeyBindObject(String sourceText) {
 		
@@ -295,7 +297,8 @@ public class VueProcessUtil {
 	 * 处理vTemplateContent 中含有 vForItemTxt 的key信息
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @param itemText
+	 * @return String
 	 */
 	public static String processTemplateContentKey(String sourceText, String itemText) {
 		
@@ -345,7 +348,7 @@ public class VueProcessUtil {
 	 * 获取render 整个方法内容
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @return String
 	 */
 	public static String getRenderAllContentFunction(String sourceText) {
 		
@@ -393,7 +396,7 @@ public class VueProcessUtil {
 	 * 获取render 方法体内容
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @return String
 	 */
 	public static String getRenderContentFunction(String sourceText) {
 		
@@ -441,7 +444,8 @@ public class VueProcessUtil {
 	 * 获取对象属性及其所有信息
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @param recordPropertyMap
+	 * @param findIndex
 	 */
 	public static void getPropertyDetailOfObject(String sourceText, Map<String, Map<String, String>> recordPropertyMap, int findIndex) {
 		
@@ -651,7 +655,7 @@ public class VueProcessUtil {
 	 * 
 	 * @param fileContent
 	 * @param parseResultMap
-	 * @return
+	 * @return String
 	 */
 	public static String changeComponentPropertys(String fileContent, Map<String, Map> parseResultMap) {
 		
@@ -702,7 +706,7 @@ public class VueProcessUtil {
 	 * 删除 .native 修饰符的所有实例，子组件需添加emits，否则会导致触发两次，本方法只去除 .native 修饰符
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @return String
 	 */
 	public static String clearOnEventWithNativeKeyWord(String sourceText) {
 		
@@ -718,7 +722,7 @@ public class VueProcessUtil {
 	 * 处理vue2 中使用键码改为 vue3 中采用修饰符
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @return String
 	 */
 	public static String replaceKeyCodeWithKeyString(String sourceText) {
 		
@@ -749,7 +753,7 @@ public class VueProcessUtil {
 	 * 
 	 * @param sourceText
 	 * @param parseResultMap
-	 * @return
+	 * @return String
 	 */
 	public static String removeUnUseInstanceInVue3(String sourceText, Map<String, Map> parseResultMap) {
 		
@@ -817,7 +821,7 @@ public class VueProcessUtil {
 	 * 
 	 * @param methodBodyContent
 	 * @param processType
-	 * @return
+	 * @return String
 	 */
 	public static String removeVue2BindObjectInfoChangeProcess(String methodBodyContent, String processType) {
 		
@@ -854,7 +858,7 @@ public class VueProcessUtil {
 	 * @param optionApiPropMap
 	 * @param newVueOptionContent
 	 * @param useTypeValue
-	 * @return
+	 * @return String
 	 */
 	public static String getNewVueOptionsUseContent(Map<String, Map<String, String>> optionApiPropMap, String newVueOptionContent, String useTypeValue) {
 		
@@ -890,7 +894,7 @@ public class VueProcessUtil {
 	 * 判断文件内容是否已经是vue3 版本
 	 * 
 	 * @param sourceText
-	 * @return
+	 * @return Boolean
 	 */
 	public static Boolean isVue3FileContent(String sourceText) {
 		

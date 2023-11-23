@@ -30,7 +30,7 @@ public class ConvertPanel extends JFrame {
 	 * 前端框架vue和react版本升级处理工具
 	 * 
 	 * @author 郑荣鸿（ChengWingHung）
-	 * @date 20231010 21:00:00
+	 * @date 20231010 21:00:00 - 20231123 19:45:00
 	 * @description 前端框架转换工具
 	 * @version 1.0.0
 	 * 
@@ -59,7 +59,7 @@ public class ConvertPanel extends JFrame {
 	
 	public String selectedFileDir = "";// 选择的文件夹路径
 	
-	public JTextField outputTextField;// 输出文件路径信息
+	public JLabel outputFilePathLabel;// 输出文件路径信息
 	
 	public JLabel processResultLabel;// 显示文件处理信息
 	
@@ -101,16 +101,41 @@ public class ConvertPanel extends JFrame {
         JLabel selectedFilePathValueLabel= new JLabel("尚未选择文件！");
         selectedFilePathPanel.add(selectedFilePathLabel);
         selectedFilePathPanel.add(selectedFilePathValueLabel);
-        selectedFilePathPanel.setBounds(100, 130, 380, 35);
+        selectedFilePathPanel.setBounds(100, 110, 380, 35);
         
         JPanel outputFilePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));// 输出文件路径设置
         
         JLabel outputLabel= new JLabel("输出路径：");
-        outputTextField = new JTextField(18);
-        outputTextField.setText(FileSystemView.getFileSystemView().getHomeDirectory().toString() + "/");// 设置默认输出目录
+        JButton changePathButton = new JButton("修改");
+        
+        changePathButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+
+            	JFileChooser jfc = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+            	jfc.setDialogTitle("请选择输出文件路径");
+                jfc.setAcceptAllFileFilterUsed(false);
+                
+                jfc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                
+                int returnValue = jfc.showOpenDialog(null);
+                
+                if (returnValue == JFileChooser.APPROVE_OPTION) {
+                	
+                	outputFilePathLabel.setText(jfc.getSelectedFile().getPath() + "/");
+                    
+                }
+            }
+        });
+        
         outputFilePanel.add(outputLabel); 
-        outputFilePanel.add(outputTextField);
-        outputFilePanel.setBounds(100, 170, 380, 35);       
+        outputFilePanel.add(changePathButton);
+        outputFilePanel.setBounds(100, 140, 380, 35);   
+        
+        JPanel outputFilePathPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));// 输出文件路径
+        outputFilePathLabel = new JLabel(FileSystemView.getFileSystemView().getHomeDirectory().toString() + "/");// 设置默认输出目录
+        outputFilePathPanel.add(outputFilePathLabel); 
+        outputFilePathPanel.setBounds(100, 170, 380, 35);   
         
         JPanel excuteBtnPanel = new JPanel(new FlowLayout());// 执行操作       
         
@@ -229,6 +254,7 @@ public class ConvertPanel extends JFrame {
         add(selectFilePanel);
         add(selectedFilePathPanel);
         add(outputFilePanel);
+        add(outputFilePathPanel);
         add(excuteBtnPanel);
         add(showProcessResultPanel);
         add(lastLayoutPanel);
@@ -242,7 +268,7 @@ public class ConvertPanel extends JFrame {
 	 */
 	private void readFileContentAndParse(int fileIndex) {
 		
-		String outPutFileDir = outputTextField.getText() + ConvertParam.LOCAL_TEST_OUTPUT_FILE_PATH;
+		String outPutFileDir = outputFilePathLabel.getText() + ConvertParam.LOCAL_TEST_OUTPUT_FILE_PATH;
 		
 		if (processFileTypeIndex == 1 || processFileTypeIndex == 3) {
 			

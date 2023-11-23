@@ -12,11 +12,11 @@ import utils.TxtContentUtil;
 import utils.VueProcessUtil;
 
 /**
+ * vue2升级vue3处理类
  * 
  * @author 郑荣鸿（ChengWingHung）
- * @date 20231010
- * @description vue2升级vue3处理类
- * @version 1.0.0 beta
+ * @date 20231010 21:00:00 - 20231115 22:00:00
+ * @version 1.0.0
  *
  */
 
@@ -105,7 +105,7 @@ public class Vue2ToVue3Process {
 	 * 全局api处理
 	 * 
 	 * @param fileContent 要处理的内容
-	 * @return 处理后的内容
+	 * @return String 处理后的内容
 	 */
 	private static String changeGlobalApi(String fileContent) {
 		
@@ -236,7 +236,7 @@ public class Vue2ToVue3Process {
 	 * 全局api Treeshaking处理
 	 * 
 	 * @param fileContent 要处理的内容
-	 * @return 处理后的内容
+	 * @return String 处理后的内容
 	 */
 	private static String changeGlobalApiTreeshaking(String fileContent) {
 		
@@ -284,7 +284,7 @@ public class Vue2ToVue3Process {
 	 * options API -> composition API
 	 * 
 	 * @param fileContent 要处理的内容
-	 * @return 处理后的内容
+	 * @return String 处理后的内容
 	 */
 	private static String changeOptionApiToCompositionApi(String fileContent) {
 		
@@ -874,7 +874,6 @@ public class Vue2ToVue3Process {
 	 * 
 	 * @param methodType
 	 * @param methodContent
-	 * @return
 	 */ 
 	private static void getMethodResultMap(String methodType, String methodContent){
 		
@@ -1076,7 +1075,7 @@ public class Vue2ToVue3Process {
 	 * 
 	 * @param getSelfPropsInfo
 	 * @param getParentPropsInfo
-	 * @return 
+	 * @return String
 	 */
 	private static String assembleVue3SetUpApi(String getSelfPropsInfo, String getParentPropsInfo) {
 		
@@ -1187,7 +1186,7 @@ public class Vue2ToVue3Process {
 	 * 替换setup 里边的 this 
 	 * 
 	 * @param methodBodyContent 方法体
-	 * @return 
+	 * @return String
 	 */
 	private static String replaceThisKeyWordOfSetUp(String methodBodyContent) {
 		
@@ -1260,7 +1259,9 @@ public class Vue2ToVue3Process {
 	 * this.$router => vueRouter 读取到路由表信息
 	 * 
 	 * @param methodBodyContent 方法体
-	 * @return 
+	 * @param routerType
+	 * @param routeType
+	 * @return String
 	 */
 	private static String replaceRouterInfoOfSetUp(String methodBodyContent, String routerType, String routeType) {
 		
@@ -1297,7 +1298,7 @@ public class Vue2ToVue3Process {
 	 * 处理vue2 this.$emit => context.emit 并获取emit 信息用于后续组装
 	 * 
 	 * @param methodBodyContent
-	 * @return
+	 * @return String
 	 */
 	public static String replaceThisEmitWithContext(String methodBodyContent) {
 		
@@ -1337,7 +1338,7 @@ public class Vue2ToVue3Process {
 	 * setup 中 const store = useStore()
 	 * 
 	 * @param methodBodyContent
-	 * @return
+	 * @return String
 	 */
 	public static String replaceThisStoreWithVuex(String methodBodyContent) {
 		
@@ -1369,7 +1370,7 @@ public class Vue2ToVue3Process {
 	 * 
 	 * @param methodBodyContent
 	 * @param addElMessage 是否添加过标志
-	 * @return
+	 * @return String
 	 */
 	public static String replaceThisMessageWithElMessage(String methodBodyContent, Boolean addElMessage) {
 		
@@ -1430,7 +1431,7 @@ public class Vue2ToVue3Process {
 	 * const { appContext : { config: { globalProperties } } } = getCurrentInstance();
 	 * 
 	 * @param methodBodyContent
-	 * @return
+	 * @return String
 	 */
 	public static String replaceIn18TmethodWithGlobalT(String methodBodyContent) {
 		
@@ -1474,7 +1475,7 @@ public class Vue2ToVue3Process {
 	 * this.$children => this.$ref.templateRef
 	 * 
 	 * @param methodBodyContent
-	 * @return
+	 * @return String
 	 */
 	public static String replaceThisChildrenByRef(String methodBodyContent) {
 		
@@ -1493,7 +1494,7 @@ public class Vue2ToVue3Process {
 	 * 引入 import { ref } from "vue"; 
 	 * 
 	 * @param methodBodyContent
-	 * @return
+	 * @return String
 	 */
 	public static String replaceRefInfoGetMethod(String methodBodyContent) {
 		
@@ -1842,7 +1843,8 @@ public class Vue2ToVue3Process {
 	 * 处理computed 中的set 和 get
 	 * 
 	 * @param methodBodyContent 方法体
-	 * @return
+	 * @param method
+	 * @return String
 	 */
 	public static String processComputedSetOrGetFunc(String methodBodyContent, String method) {
 		
@@ -1905,7 +1907,7 @@ public class Vue2ToVue3Process {
 	 * 为模板元素添加ref 引用
 	 * 
 	 * @param fileContent
-	 * @return
+	 * @return String
 	 */
 	public static String setTemplateChildrenWithRef(String fileContent) {
 		

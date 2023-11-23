@@ -19,7 +19,7 @@ public class ConvertParam {
 	public static String RECOMMEND_BY_CONVERTVAR = " => by ConvertVAR";
 	
 	// 本地测试输出文件夹
-	public static String LOCAL_TEST_OUTPUT_FILE_PATH = "Documents/测试数据/";// Documents/测试数据/
+	public static String LOCAL_TEST_OUTPUT_FILE_PATH = "";
 		
 	// vue2 => vue3实际输出文件夹
 	public static String VUE3_OUTPUT_FILE_PATH = "convertResult_vue3";
