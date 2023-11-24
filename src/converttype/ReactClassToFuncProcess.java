@@ -13,6 +13,7 @@ import utils.TxtContentUtil;
  * 
  * @author 郑荣鸿（ChengWingHung）
  * @date 20231116 19:00:00 - 20231123 19:45:00
+ * @description 只处理一个文件一个类组件的情况
  * @version 1.0.0
  *
  */
@@ -207,13 +208,11 @@ public class ReactClassToFuncProcess {
 	 */
 	public static void getReactPropsInfo(String parseResultContent) {
 		
-		String tempText = "";
-		
-		Map<String, String> methodMap = new HashMap<>();
-		
 		if (classPropsResultMap.containsKey(ConvertParam.ReactClassLifeMethodList[0])) {
 			
-			methodMap = classPropsResultMap.get(ConvertParam.ReactClassLifeMethodList[0]);
+			String tempText = "";
+			
+			Map<String, String> methodMap = classPropsResultMap.get(ConvertParam.ReactClassLifeMethodList[0]);
 			
 			tempText = methodMap.get("methodBody");
 			
@@ -303,8 +302,6 @@ public class ReactClassToFuncProcess {
 	 */
 	public static String getAssembleReactFuncContent() {
 		
-		Boolean importUseEffect = false;// 是否需要引入useEffect
-		
 		String tempText = "";
 		String fcName = "";
 		String fcState = "";
@@ -312,6 +309,8 @@ public class ReactClassToFuncProcess {
 		String jsxContent = "";
 		String renderMethodContent = "";
 		String parseReactResultContent = "";
+		
+		Boolean importUseEffect = false;// 是否需要引入useEffect
 		
 		parseReactResultContent = "function ";
 		

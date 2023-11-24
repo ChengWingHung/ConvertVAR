@@ -660,7 +660,9 @@ public class TxtContentUtil {
 		
 		// 还有注释信息，继续清除
 		if (tempTxt.indexOf("<--") == 0 || tempTxt.indexOf("/**") == 0 || tempTxt.indexOf("//") == 0) {
+			
 			startIndex += sourceText.indexOf(tempTxt.substring(0, 2));
+			
 			isKeyWordExist(processContentTxt, keyWord, startIndex);
 			return;
 		}
