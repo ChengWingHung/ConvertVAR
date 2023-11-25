@@ -123,7 +123,7 @@ public class VueProcessUtil {
 			
 		} else {
 			
-			if (sourceText.indexOf(',') > sourceText.indexOf(':')) {
+			if (sourceText.indexOf(':') > -1 && sourceText.indexOf(',') > sourceText.indexOf(':')) {
 				
 				dataName = sourceText.substring(0, sourceText.indexOf(':'));
 				//值部分判断 ' " [ ` { 字符包裹的情况
@@ -888,6 +888,81 @@ public class VueProcessUtil {
 		newVueOptionContent = newVueOptionContent.substring(0, endIndex) + ".use(" + useTypeValue + ")" + newVueOptionContent.substring(endIndex, newVueOptionContent.length());
 		
 		return newVueOptionContent;
+	}
+	
+	public static String processVuexMapMethod(String methodContent, Map<String, Map<String, String>> vuexResultMap) {
+		
+		// mapState
+		methodContent = processVuexMapStateGettersMethod(methodContent, "mapState", vuexResultMap);
+		
+		// mapGetters
+		methodContent = processVuexMapStateGettersMethod(methodContent, "mapGetters", vuexResultMap);
+		
+		// mapMutations
+		methodContent = processVuexMapStateGettersMethod(methodContent, "mapMutations", vuexResultMap);
+				
+		// useActions
+		methodContent = processVuexMapStateGettersMethod(methodContent, "mapActions", vuexResultMap);
+		
+		return methodContent;
+	}
+	
+	public static String processVuexMapStateGettersMethod(String methodContent, String mapTypeValue, Map<String, Map<String, String>> vuexResultMap) {
+		
+		if ("".equals(methodContent.trim())) return "";
+		
+		if (methodContent.indexOf(mapTypeValue + "(") > -1) {
+			
+			String tempText = "";
+			String mapTypeParamValue = "";
+			String mapTypeParamListValue = "";
+			String replaceContent = "";
+			
+			int endIndex = -1;
+			
+			tempText = methodContent.substring(0, methodContent.indexOf(mapTypeValue + "("));
+			replaceContent = methodContent.substring(methodContent.indexOf(mapTypeValue + "("), methodContent.length());
+			
+			endIndex = TxtContentUtil.getTagEndIndex(replaceContent, '(', ')') + 1;
+			
+			replaceContent = replaceContent.substring(0, endIndex);
+			
+			mapTypeParamValue = replaceContent.substring(replaceContent.indexOf('('), replaceContent.lastIndexOf(')') + 1);
+			
+			mapTypeParamListValue = mapTypeParamValue.substring(mapTypeParamValue.indexOf('['), mapTypeParamValue.lastIndexOf(']') + 1);
+			
+			// ...mapState()
+			if ("...".equals(tempText.substring(tempText.length() - 3, tempText.length()))) {
+				
+				replaceContent = "..." + replaceContent;
+				
+				methodContent = methodContent.replace(replaceContent, "");
+			}
+			
+			// 对应到封装的vuex方法
+			if ("mapState".equals(mapTypeValue)) mapTypeValue = "mapStates";
+			if ("mapGetters".equals(mapTypeValue)) mapTypeValue = "mapGetter";
+			
+			Map<String, String> vuexMap = new HashMap<>();
+			
+			vuexMap.put("vuexName", mapTypeValue);
+			vuexMap.put("vuexParamValue", mapTypeParamValue);
+			vuexMap.put("vuexParamListValue", mapTypeParamListValue);
+			
+			vuexResultMap.put(mapTypeValue, vuexMap);
+			
+			methodContent = methodContent.trim();
+			
+			// 第一个如果是逗号
+			if (methodContent.indexOf(',') == 0) methodContent = methodContent.substring(1, methodContent.length()).trim();
+		}
+		
+		return methodContent;
+	}
+	
+	public static String processVuexMapStateGettersMethod(String methodContent) {
+		
+		return methodContent;
 	}
 	
 	/**

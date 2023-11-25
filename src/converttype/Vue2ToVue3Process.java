@@ -38,6 +38,8 @@ public class Vue2ToVue3Process {
 	
 	private static Map<String, Map<String, String>> propsResultMap;// props map
 	
+	private static Map<String, Map<String, String>> vuexResultMap;// vuex info map
+	
 	private static Map<String, Map<String, String>> clearInfoMap;// vue3 中移除的 vue2 信息
 	
 	private static Map<String, String> stateDataResultMap;// state data 信息存储对象
@@ -553,9 +555,11 @@ public class Vue2ToVue3Process {
 			dataResultText = tempText;// 存储用于后续整个替换内容
 			
 			// data(){return {}} 的情况
-			if (tempText.indexOf("return ") > -1) {
+			if (tempText.indexOf("return") > -1) {
 				
-				startInex = tempText.indexOf("return ") + "return ".length();
+				startInex = tempText.indexOf("return") + "return".length();
+				
+				startInex += tempText.substring(startInex, tempText.length()).indexOf('{');
 			} else {
 				
 				startInex = tempText.indexOf('{');
@@ -585,6 +589,8 @@ public class Vue2ToVue3Process {
 			optionsConfigText = TxtContentUtil.deleteFirstComma(optionsConfigText, optionsConfigText.indexOf(dataResultText) + dataResultText.length());// 删除末尾的逗号
 			optionsConfigText = optionsConfigText.replace(dataResultText, "");// 替换掉整个data的内容
 		}
+		
+		vuexResultMap = new HashMap<>();
 		
 		// 判断filters、computed、watch、methods
 		for (int i=0;i<ConvertParam.Vue2ToVue3SetUpMethodList.length;i++) {
@@ -635,6 +641,41 @@ public class Vue2ToVue3Process {
 			}
 		}
 		
+		// vuex 信息
+		String importVuexContent = "";
+		String vuexDefineContent = "";
+		
+		if (vuexResultMap.size() > 0) {
+			
+			Map<String, String> vuexMap;
+			
+			for (Map.Entry<String, Map<String, String>> entry : vuexResultMap.entrySet()) {
+				
+				vuexMap = entry.getValue();
+				
+				tempText = vuexMap.get("vuexName");
+				
+				importVuexContent += tempText + ", ";
+				
+				// 变量名
+				tempText = "iNeedYouMapStore" + tempText.substring(3, tempText.length());
+				
+				// 添加到return 
+				setUpReturnResultList.add("..." + tempText);
+				
+				vuexDefineContent += "const " + tempText + " = " + vuexMap.get("vuexName") + vuexMap.get("vuexParamValue") + ";\n";
+			}
+			
+			// 计算相对路径
+			String vuexHooksRelativePath = "./";
+			
+			addVue3ImportContent(vuexHooksRelativePath + "vuex-hooks", importVuexContent.substring(0, importVuexContent.length() - 2));// vuex-hooks
+			
+			// 去除原先引入的这四个函数
+			
+			
+		}
+		
 		String setUpContentText = "setup() {\n";
 		
 		if (!"".equals(selfPropDefineInfo)) {
@@ -642,6 +683,12 @@ public class Vue2ToVue3Process {
 			addVue3ImportContent("vue", "reactive");// 引入reactive
 			
 			setUpContentText = "setup(props) {\n" + selfPropDefineInfo;
+		}
+		
+		// vuex 定义部分
+		if (!"".equals(vuexDefineContent)) {
+			
+			setUpContentText += vuexDefineContent;
 		}
 		
 		if (!"".equals(vueComponentName)) {
@@ -877,6 +924,9 @@ public class Vue2ToVue3Process {
 	 */ 
 	private static void getMethodResultMap(String methodType, String methodContent){
 		
+		// 处理vuex 中的四个map方法
+		methodContent = VueProcessUtil.processVuexMapMethod(methodContent, vuexResultMap);
+		
 		// 为空的时候无需解析
 		if ("".equals(methodContent)) return;
 		
@@ -941,7 +991,12 @@ public class Vue2ToVue3Process {
 				
 			} else {
 				
-				methodContentText = methodContentText.substring(methodContentText.indexOf('{') + 1, methodContentText.length());
+				tempText = methodContentText.substring(methodContentText.indexOf(':') + 1, methodContentText.length());
+				
+				if (tempText.trim().indexOf("function") != 0) {
+					
+					methodContentText = methodContentText.substring(methodContentText.indexOf('{') + 1, methodContentText.length());
+				}
 				
 				if (methodContentText.indexOf('(') > -1) {
 					
@@ -971,10 +1026,20 @@ public class Vue2ToVue3Process {
 		
 		methodContent = methodContent.substring(methodContent.indexOf(methodContentText) + methodContentText.length(), methodContent.length());
 		
+		String isAsync = "no";
+		
+		if (methodName.indexOf("async ") > -1) {
+			
+			methodName = methodName.substring(methodName.indexOf("async ") + "async ".length(), methodName.length()).trim();
+			
+			isAsync = "yes";
+		}
+		
 		// 组装方法信息到map对象
 		Map<String, String> methodMap = new HashMap<>();
 		
 		methodMap.put("methodDescription", methodDescription);
+		methodMap.put("isAsync", isAsync);
 		methodMap.put("methodName", methodName);
 		methodMap.put("methodParams", methodParams);
 		methodMap.put("methodBody", methodBody);
@@ -1139,7 +1204,15 @@ public class Vue2ToVue3Process {
 					
 					getAllVariableOfMethodUse(methodBodyContent);
 					
-					vue3SetUpResultValue = methodDescription + "const " + methodMap.get("methodName") + " = (" + methodMap.get("methodParams") + ") => " + methodBodyContent + ";\n";
+					// 是否异步调用
+					if ("yes".equals(methodMap.get("isAsync"))) {
+						
+						vue3SetUpResultValue = methodDescription + "const " + methodMap.get("methodName") + " = async (" + methodMap.get("methodParams") + ") => " + methodBodyContent + ";\n";
+					} else {
+						
+						vue3SetUpResultValue = methodDescription + "const " + methodMap.get("methodName") + " = (" + methodMap.get("methodParams") + ") => " + methodBodyContent + ";\n";
+					}
+					
 				}
 			}
 			
@@ -1746,9 +1819,7 @@ public class Vue2ToVue3Process {
 			// 执行define 内容的插入，插入到最后一个import  前面
 			if (!"".equals(vue3ParsePartDefineContent)) {
 				
-				tempText = fileContent.substring(fileContent.lastIndexOf("import "), fileContent.length());
-				
-				startInex = fileContent.lastIndexOf("import ") + TxtContentUtil.getStatementEndIndex(tempText, 0);
+				startInex = findLastImportKeyIndex(fileContent);
 				
 				fileContent = fileContent.substring(0, startInex + 1) + "\n\n" + vue3ParsePartDefineContent + "\n\n" + fileContent.substring(startInex + 1, fileContent.length());
 				
@@ -1756,6 +1827,27 @@ public class Vue2ToVue3Process {
 		}
 		
 		return fileContent;
+	}
+	
+	private static int findLastImportKeyIndex(String fileContent) {
+		
+		String tempText = "";
+		
+		int startInex = -1;
+		
+		tempText = fileContent.substring(0, fileContent.lastIndexOf("import "));
+		
+		//css @import
+		if (tempText.length() > 0 && '@' == tempText.charAt(tempText.length() - 1)) {
+			
+			return findLastImportKeyIndex(tempText);
+		}
+		
+		tempText = fileContent.substring(fileContent.lastIndexOf("import "), fileContent.length());
+		
+		startInex = fileContent.lastIndexOf("import ") + TxtContentUtil.getStatementEndIndex(tempText, 0);
+		
+		return startInex;
 	}
 	
 	private static String changeVueRouteInNewWay(String fileContent) {

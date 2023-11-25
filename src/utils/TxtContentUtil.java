@@ -233,7 +233,7 @@ public class TxtContentUtil {
 				}
 			}
 			
-			commentDescription = sourceText.substring(sourceText.indexOf("//"), endIndex);
+			commentDescription = sourceText.substring(sourceText.indexOf("//"), endIndex == -1?tempText.length():endIndex);
 			
 		}
 		
