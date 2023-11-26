@@ -960,9 +960,66 @@ public class VueProcessUtil {
 		return methodContent;
 	}
 	
-	public static String processVuexMapStateGettersMethod(String methodContent) {
+	public static String clearSetUpContentThisRef(String fileContent) {
 		
-		return methodContent;
+		String tempText = "";
+		String replaceContent = "";
+		
+		if (fileContent.indexOf("setup(") > -1) {
+			
+			tempText = fileContent.substring(fileContent.indexOf("setup("), fileContent.length());
+			
+			tempText = tempText.substring(0, TxtContentUtil.getTagEndIndex(tempText, '{', '}') + 1);
+			
+			replaceContent = tempText;
+			
+			tempText = TxtContentUtil.replaceAll(tempText, "this.", "");
+			
+			fileContent = fileContent.replace(replaceContent, tempText);
+		}
+		
+		return fileContent;
+	}
+	
+	public static String clearVuexImportMapMethodContent(String fileContent) {
+		
+		String tempText = "";
+		
+		tempText = TxtContentUtil.findImportContentByKey(fileContent, "vuex", 0);
+		
+		if (!"".equals(tempText)) {
+			
+			String replaceContent = tempText.substring(tempText.indexOf('#') + 1, tempText.length());
+			
+			if (tempText.indexOf('{') > -1) {
+				
+				tempText = replaceContent.substring(replaceContent.indexOf('{') + 1, replaceContent.lastIndexOf('}'));
+			} else {
+				
+				tempText = replaceContent.substring(replaceContent.indexOf("import ") + "import ".length(), replaceContent.lastIndexOf(" from "));
+			}
+			
+			String newImportContent = "";
+			
+			for (String importContent:tempText.split(",")) {
+				
+				if (!"".equals(importContent.trim()) && "mapState,mapGetters,mapMutations,mapActions".indexOf(importContent.trim()) < 0) {
+					
+					newImportContent += importContent.trim() + ", ";
+				}
+			}
+			
+			if (!"".equals(newImportContent)) {
+				
+				newImportContent = newImportContent.substring(0, newImportContent.length() - 2);
+				
+				newImportContent = "import { " + newImportContent + " } from 'vuex';";
+			}
+			
+			fileContent = fileContent.replace(replaceContent, newImportContent);
+		}
+		
+		return fileContent;
 	}
 	
 	/**

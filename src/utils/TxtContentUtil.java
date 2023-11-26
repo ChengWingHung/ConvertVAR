@@ -670,23 +670,43 @@ public class TxtContentUtil {
 		// 无对应关键信息
 		if (sourceText.indexOf(keyWord) < 0) return;
 			
-		
-		if (sourceText.indexOf(keyWord) == 0) {
-			
-			if (sourceText.length() == keyWord.length() || (sourceText.length() > keyWord.length() && !String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) + keyWord.length())).matches(ConvertParam.JS_VARIABLE_REG))) {
-				
-				keyWordIndex = startIndex + sourceText.indexOf(keyWord);
-			}
-		} else if (sourceText.indexOf(keyWord) == sourceText.length() - keyWord.length()) {
-			
-			if (!String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) - 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
-				
-				keyWordIndex = startIndex + sourceText.indexOf(keyWord);
-			}
-			
-		} else if (!String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) - 1)).matches(ConvertParam.JS_VARIABLE_REG) && !String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) + keyWord.length())).matches(ConvertParam.JS_VARIABLE_REG)) {
+		// 首尾都带非变量标志
+		if (!String.valueOf(keyWord.charAt(0)).matches(ConvertParam.JS_VARIABLE_REG) && !String.valueOf(keyWord.charAt(keyWord.length() - 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
 			
 			keyWordIndex = startIndex + sourceText.indexOf(keyWord);
+		}
+		// 末位带非变量标志
+		else if (!String.valueOf(keyWord.charAt(keyWord.length() - 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
+			
+			if (sourceText.indexOf(keyWord) == 0) {
+				
+				keyWordIndex = startIndex;
+			} else if (!String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) - 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
+				
+				keyWordIndex = startIndex + sourceText.indexOf(keyWord);
+			}
+			
+		} 
+		// 全是变量
+		else {
+			
+			if (sourceText.indexOf(keyWord) == 0) {
+				
+				if (sourceText.length() == keyWord.length() || (sourceText.length() > keyWord.length() && !String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) + keyWord.length())).matches(ConvertParam.JS_VARIABLE_REG))) {
+					
+					keyWordIndex = startIndex + sourceText.indexOf(keyWord);
+				}
+			} else if (sourceText.indexOf(keyWord) == sourceText.length() - keyWord.length()) {
+				
+				if (!String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) - 1)).matches(ConvertParam.JS_VARIABLE_REG)) {
+					
+					keyWordIndex = startIndex + sourceText.indexOf(keyWord);
+				}
+				
+			} else if (!String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) - 1)).matches(ConvertParam.JS_VARIABLE_REG) && !String.valueOf(sourceText.charAt(sourceText.indexOf(keyWord) + keyWord.length())).matches(ConvertParam.JS_VARIABLE_REG)) {
+				
+				keyWordIndex = startIndex + sourceText.indexOf(keyWord);
+			}
 		}
 		
 		if (keyWordIndex == -1) {
@@ -810,6 +830,46 @@ public class TxtContentUtil {
 		}
 		
 		return sourceText;
+	}
+	
+	public static String findImportContentByKey(String fileContent, String fromKey, int startIndex) {
+		
+		String tempText = "";
+		
+		if (fileContent.indexOf(fromKey) > -1) {
+			
+			int endIndex = fileContent.indexOf(fromKey);
+			
+			tempText = fileContent.substring(0, endIndex);
+			
+			// find it
+			if (tempText.trim().lastIndexOf("from ") == tempText.trim().length() - 6) {
+				
+				String replaceContent = "";
+				
+				startIndex += tempText.lastIndexOf("import ");
+				
+				replaceContent = tempText.substring(tempText.lastIndexOf("import "), tempText.length());
+				
+				tempText = fileContent.substring(endIndex, fileContent.length());
+				
+				tempText = tempText.substring(0, TxtContentUtil.getStatementEndIndex(tempText, 0));
+				
+				replaceContent += tempText;
+				
+				return startIndex + "#" + replaceContent;
+				
+			} else {
+				
+				tempText = fileContent.substring(endIndex + fromKey.length(), fileContent.length());
+				
+				startIndex += endIndex + fromKey.length();
+				
+				return findImportContentByKey(tempText, fromKey, startIndex);
+			}
+		}
+		
+		return "";
 	}
 	
 	/**

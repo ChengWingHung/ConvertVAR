@@ -14,6 +14,7 @@ import converttype.Vue2ToReactFuncProcess;
 import converttype.Vue2ToVue3Process;
 import utils.ConvertLogUtil;
 import utils.FileOperationUtil;
+import utils.GenerateClassFileUtil;
 
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -22,6 +23,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ConvertPanel extends JFrame {
 
@@ -242,6 +245,8 @@ public class ConvertPanel extends JFrame {
                 processFileTypeIndex = typeSelectBox.getSelectedIndex();
                 processFileIndex = 0;
                 
+                GenerateClassFileUtil.fileListMap = new HashMap<>();
+                
                 parseFileStartTime = new Date().getTime();
                 
                 readFileContentAndParse(processFileIndex);
@@ -279,6 +284,21 @@ public class ConvertPanel extends JFrame {
 		
 		// 判断是否解析完毕
 		if (fileIndex == processFileList.size()) {
+			
+			// 需要添加的封装的文件
+			for (Map.Entry<String, String> entry:GenerateClassFileUtil.fileListMap.entrySet()){
+				
+				try {
+					
+					FileOperationUtil.createResultFile(outPutFileDir, outPutFileDir + entry.getKey());// 创建生成的文件
+		        	
+		    		FileOperationUtil.writeContentIntoFile(outPutFileDir + entry.getKey(), entry.getValue(), false);//写入文件
+				} catch(IOException err) {
+					
+		        	ConvertLogUtil.printConvertLog("error", "创建封装的文件失败:" + outPutFileDir + entry.getKey());
+				}
+				
+			}
 			
 			// 此处后续可以考虑优化为全部解析完成后再生成文件，如果需要在解析某个文件中间过程中去增加其他文件的信息时
 			
@@ -345,14 +365,30 @@ public class ConvertPanel extends JFrame {
     	showProcessContent("当前处理文件：" + currentFilePath, 0);
     	
     	resultFilePath = currentFilePath;
-		resultFileName = currentFilePath.lastIndexOf('/') > -1?currentFilePath.substring(currentFilePath.lastIndexOf('/'), currentFilePath.length()):currentFilePath;
+		resultFileName = currentFilePath.lastIndexOf('/') > -1?currentFilePath.substring(currentFilePath.lastIndexOf('/') + 1, currentFilePath.length()):currentFilePath;
 		
 		ConvertLogUtil.printConvertLog("info", "当前执行的文件：" + resultFilePath);
 		
-    	if (processFileTypeIndex == 1) {
+		String outPutFilePath = "";
+		
+		if (fileTypeIndex == 1) {
+			
+			// 获取相对路径信息
+			relativeFilePath = resultFilePath.substring(resultFilePath.indexOf(selectedFileDir) + selectedFileDir.length(), resultFilePath.length());
+			
+			outPutFilePath = outPutFileDir + relativeFilePath;
+			
+		} else {
+			
+			relativeFilePath = resultFileName;
+			
+			outPutFilePath = outPutFileDir + resultFileName;
+		}
+		
+		if (processFileTypeIndex == 1) {
     		
     		// vue2 => vue3
-    		parseResultFileContent = Vue2ToVue3Process.parseVue2FileContent(resultFileName, fileContentValue);
+    		parseResultFileContent = Vue2ToVue3Process.parseVue2FileContent(resultFileName, relativeFilePath, fileContentValue);
     	} else if (processFileTypeIndex == 2) {
     		
     		// react class => function
@@ -366,20 +402,6 @@ public class ConvertPanel extends JFrame {
     		// react class => vue3 预留
     		parseResultFileContent = ReactClassToVue3Process.parseReactFileContent(resultFileName, fileContentValue);
     	}
-		
-		String outPutFilePath = "";
-		
-		if (fileTypeIndex == 1) {
-			
-			// 获取相对路径信息
-			relativeFilePath = resultFilePath.substring(resultFilePath.indexOf(selectedFileDir) + selectedFileDir.length(), resultFilePath.length());
-			
-			outPutFilePath = outPutFileDir + relativeFilePath;
-			
-		} else {
-			
-			outPutFilePath = outPutFileDir + resultFileName;
-		}
 		
 		try {
 			

@@ -8,6 +8,7 @@ import java.util.regex.Matcher;
 import common.ConvertParam;
 import utils.ConvertLogUtil;
 import utils.FileOperationUtil;
+import utils.GenerateClassFileUtil;
 import utils.TxtContentUtil;
 import utils.VueProcessUtil;
 
@@ -27,6 +28,8 @@ public class Vue2ToVue3Process {
 	}
 	
 	private static String parseFileName;// 当前要解析的文件名
+	
+	private static String parseFileNamePath;
 	
 	private static Map<String, Map> parseResultMap;// 解析后的信息存储对象
 	
@@ -54,7 +57,7 @@ public class Vue2ToVue3Process {
 	
 	private static int count = 0;// 计数器
 	
-	public static String parseVue2FileContent(String fileName, String parseResultContent) {
+	public static String parseVue2FileContent(String fileName, String relativeFilePath, String parseResultContent) {
 		
 		// 先判断文件是否为vue3 版本，是的话则不继续处理
 		if (VueProcessUtil.isVue3FileContent(parseResultContent)) return parseResultContent;
@@ -62,6 +65,8 @@ public class Vue2ToVue3Process {
 		templateRef = "";
 		
 		parseFileName = fileName;
+		
+		parseFileNamePath = relativeFilePath;
 		
 		parseResultMap = new HashMap<>();
 		
@@ -91,6 +96,8 @@ public class Vue2ToVue3Process {
 		
 		// TypeScript 版本
 		parseResultContent = changeTypeScriptVersion(parseResultContent);
+		
+		parseResultContent = clearVuexImportAndThisRef(parseResultContent);
 		
 		// 处理最终合并的结果
 		parseResultContent = getVue3FileResultContent(parseResultContent);
@@ -667,13 +674,24 @@ public class Vue2ToVue3Process {
 			}
 			
 			// 计算相对路径
-			String vuexHooksRelativePath = "./";
+			String vuexHooksRelativePath = "";
 			
-			addVue3ImportContent(vuexHooksRelativePath + "vuex-hooks", importVuexContent.substring(0, importVuexContent.length() - 2));// vuex-hooks
+			if (parseFileNamePath.split("/").length - 1 > 0) {
+				
+				for (int i=0;i<parseFileNamePath.split("/").length - 1;i++) {
+					
+					vuexHooksRelativePath += "../";
+				}
+				
+				vuexHooksRelativePath += "vuex-hooks/vuexHooks.js";
+			} else {
+				
+				vuexHooksRelativePath = "./vuex-hooks/vuexHooks.js";
+			}
 			
-			// 去除原先引入的这四个函数
+			addVue3ImportContent(vuexHooksRelativePath, importVuexContent.substring(0, importVuexContent.length() - 2));// vuex-hooks
 			
-			
+			GenerateClassFileUtil.fileListMap.put("vuex-hooks/vuexHooks.js", GenerateClassFileUtil.VuexMethodContent);
 		}
 		
 		String setUpContentText = "setup() {\n";
@@ -1732,24 +1750,38 @@ public class Vue2ToVue3Process {
 				
 				vue3ImportContent = vue3ImportContent.substring(0, vue3ImportContent.lastIndexOf(','));
 				
-				vue3ImportContent += " } from '" + entry.getKey() + "'";
-				
 				// 判断原先内容中是否有from 这个库，有则替换，无则插入
-				if (fileContent.indexOf(" from '" + entry.getKey() + "'") > -1) {
-					tempText = " from '" + entry.getKey() + "'";
-				} else if (fileContent.indexOf(" from \"" + entry.getKey() + "\"") > -1) {
-					tempText = " from \"" + entry.getKey() + "\"";
-				}
+				tempText = TxtContentUtil.findImportContentByKey(fileContent, entry.getKey(), 0);
 				
 				if ("".equals(tempText)) {
+					
+					vue3ImportContent += " } from '" + entry.getKey() + "'";
 					
 					vue3ParsePartImportContent += vue3ImportContent + ";\n";// 执行拼接，用于最后的拼接到文件内容中
 				} else {
 					
-					// 直接替换原来内容
-					startInex = fileContent.substring(0, fileContent.indexOf(tempText)).lastIndexOf("import ");
+					String originImportContent = tempText.substring(tempText.indexOf('#') + 1, tempText.length());
 					
-					fileContent = fileContent.substring(0, startInex) + vue3ImportContent + fileContent.substring(fileContent.indexOf(tempText) + tempText.length(), fileContent.length());
+					tempText = originImportContent;
+					
+					if (tempText.indexOf('{') > -1) {
+						
+						tempText = tempText.substring(tempText.indexOf('{') + 1, tempText.lastIndexOf('}'));
+					} else {
+						
+						tempText = tempText.substring(tempText.indexOf("import ") + "import ".length(), tempText.lastIndexOf(" from "));
+					}
+					
+					tempText = tempText.trim();
+					
+					if (',' != tempText.charAt(0)) tempText = ", " + tempText;
+					
+					vue3ImportContent += tempText;
+					
+					vue3ImportContent += " } from '" + entry.getKey() + "'";
+					
+					// 直接替换原来内容
+					fileContent = fileContent.replace(originImportContent, vue3ImportContent);
 					
 				}
 				
@@ -2029,6 +2061,15 @@ public class Vue2ToVue3Process {
 	private static String changeTypeScriptVersion(String fileContent) {
 		
 		
+		
+		return fileContent;
+	}
+	
+	public static String clearVuexImportAndThisRef(String fileContent) {
+		
+		fileContent = VueProcessUtil.clearVuexImportMapMethodContent(fileContent);
+		
+		fileContent = VueProcessUtil.clearSetUpContentThisRef(fileContent);
 		
 		return fileContent;
 	}

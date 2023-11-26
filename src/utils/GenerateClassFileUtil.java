@@ -1,17 +1,19 @@
 package utils;
 
+import java.util.Map;
+
 public class GenerateClassFileUtil {
 
 	public GenerateClassFileUtil() {
 		
 	}
 	
-	public static String VUX_EXPORT_PATH = "vuex-hooks";
+	public static Map<String, String> fileListMap;
 	
 	// 封装的vuex方法用于vue3
 	public static String VuexMethodContent = "\n" + 
 			"import { reactive, computed } from \"vue\";\n" + 
-			"import { useStore , mapState, mapGetters, createNamespacedHelpers} from \"vuex\";\n" + 
+			"import { useStore , mapState, mapGetters, createNamespacedHelpers } from \"vuex\";\n" + 
 			"\n" + 
 			"export {\n" + 
 			"    mapStates, mapGetter, mapMutations, mapActions\n" + 
