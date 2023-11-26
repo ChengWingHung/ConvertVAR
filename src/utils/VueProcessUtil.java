@@ -36,7 +36,7 @@ public class VueProcessUtil {
 		if (!"".equals(tempText)) propDescription += "\n" + tempText;
 		
 		// 还有注释信息，继续清除
-		if (sourceText.indexOf("/**") == 0 || sourceText.indexOf("//") == 0) {
+		if (sourceText.indexOf("<--") == 0 || sourceText.indexOf("/**") == 0 || sourceText.indexOf("//") == 0) {
 			processVuePropsInfo(sourceText, propsResultMap, propDescription);
 			return;
 		}
@@ -487,6 +487,11 @@ public class VueProcessUtil {
 		
 		startIndex = startIndex == -1?0:startIndex;
 		
+		if ("".equals(sourceText.trim())) return;
+		
+		// ' " 无需处理
+		if ('\'' == sourceText.trim().charAt(0) || '\"' == sourceText.trim().charAt(0)) return;
+		
 		// 无逗号，只有一个字段
 		if (sourceText.indexOf(',') < 0) {
 			
@@ -534,7 +539,15 @@ public class VueProcessUtil {
 			
 			if (' ' != charTypeValue) {
 				
-				apiName = sourceText.substring(startIndex, sourceText.indexOf(charTypeValue));
+				if (sourceText.indexOf(charTypeValue) < startIndex) {
+					
+					tempText = sourceText.substring(sourceText.indexOf(charTypeValue) + 1, sourceText.length());
+					
+					apiName = sourceText.substring(startIndex, sourceText.indexOf(charTypeValue) + tempText.indexOf(charTypeValue) + 1);
+				} else {
+					
+					apiName = sourceText.substring(startIndex, sourceText.indexOf(charTypeValue));	
+				}
 				
 				if (':' == charTypeValue) {
 					
@@ -929,7 +942,16 @@ public class VueProcessUtil {
 			
 			mapTypeParamValue = replaceContent.substring(replaceContent.indexOf('('), replaceContent.lastIndexOf(')') + 1);
 			
-			mapTypeParamListValue = mapTypeParamValue.substring(mapTypeParamValue.indexOf('['), mapTypeParamValue.lastIndexOf(']') + 1);
+			if (mapTypeParamValue.indexOf('[') > -1) {
+				// 正常的情况
+				mapTypeParamListValue = mapTypeParamValue.substring(mapTypeParamValue.indexOf('['), mapTypeParamValue.lastIndexOf(']') + 1);
+			} else if (mapTypeParamValue.indexOf('{') > -1) {
+				// 取别名的情况
+				mapTypeParamListValue = mapTypeParamValue.substring(mapTypeParamValue.indexOf('{'), mapTypeParamValue.lastIndexOf('}') + 1);
+			} else {
+				
+				mapTypeParamListValue = mapTypeParamValue;
+			}
 			
 			// ...mapState()
 			if ("...".equals(tempText.substring(tempText.length() - 3, tempText.length()))) {

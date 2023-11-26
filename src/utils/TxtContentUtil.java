@@ -843,7 +843,7 @@ public class TxtContentUtil {
 			tempText = fileContent.substring(0, endIndex);
 			
 			// find it
-			if (tempText.trim().lastIndexOf("from ") == tempText.trim().length() - 6) {
+			if (tempText.lastIndexOf("import ") > 0 && tempText.trim().lastIndexOf("from ") == tempText.trim().length() - 6) {
 				
 				String replaceContent = "";
 				

@@ -481,6 +481,9 @@ public class Vue2ToVue3Process {
 		
 		VueProcessUtil.getPropertyDetailOfObject(optionsConfigText.substring(1, optionsConfigText.length() - 1), optionApiPropMap, 1);
 		
+		// 说明无需处理
+		if (optionApiPropMap.size() == 0) return fileContent;
+		
 		Map<String, String> apiDataMap = new HashMap<>();
 		
 		String apiTempText = "";
@@ -923,13 +926,13 @@ public class Vue2ToVue3Process {
 		
 		tempText = TxtContentUtil.getContentByTag(optionsConfigText, startInex, '{', '}');// 得到method整个方法
 		
-		if ("computed".equals(methodType) || "watch".equals(methodType)) {
+		if ("computed".equals(methodType) || "watch".equals(methodType) || "filters".equals(methodType)) {
 			
 			count = 0;
 		}
 		
 		// 得到里边所有的方法并封装成一个map对象返回
-		getMethodResultMap("methods".equals(methodType)?"":methodType, tempText.substring(tempText.indexOf('{') + 1, tempText.lastIndexOf('}')).trim());
+		getMethodResultMap("methods".equals(methodType)?"":methodType, tempText.substring(tempText.indexOf('{') + 1, tempText.lastIndexOf('}')).trim(), "");
 		
 		return tempText;// 得到整个方法内容用于替换
 	}
@@ -940,10 +943,10 @@ public class Vue2ToVue3Process {
 	 * @param methodType
 	 * @param methodContent
 	 */ 
-	private static void getMethodResultMap(String methodType, String methodContent){
+	private static void getMethodResultMap(String methodType, String methodContent, String methodDescription){
 		
-		// 处理vuex 中的四个map方法
-		methodContent = VueProcessUtil.processVuexMapMethod(methodContent, vuexResultMap);
+		// 处理vuex 中的四个map方法，处理一次即可
+		if ("".equals(methodDescription)) methodContent = VueProcessUtil.processVuexMapMethod(methodContent, vuexResultMap);
 		
 		// 为空的时候无需解析
 		if ("".equals(methodContent)) return;
@@ -953,14 +956,33 @@ public class Vue2ToVue3Process {
 		String methodParams = "";
 		String methodBody = "";
 		String methodContentText = "";
-		String methodDescription = "";
 		
 		int endIndex = -1;// 获取截取结束位置
 		
-		// 判断是否有注释
-		methodDescription = TxtContentUtil.getCommentInformation(methodContent);
+		tempText = TxtContentUtil.getCommentInformation(methodContent);
 		
-		if (!"".equals(methodDescription)) methodContent = methodContent.substring(methodContent.indexOf(methodDescription) + methodDescription.length(), methodContent.length());
+		if (!"".equals(tempText)) {
+			
+			methodContent = methodContent.substring(methodContent.indexOf(tempText) + tempText.length(), methodContent.length());
+			
+			// 判断是否有注释
+			if ("".equals(methodDescription)) {
+				
+				methodDescription = tempText;
+			} else {
+				
+				methodDescription += "\n" + tempText;
+			}
+			
+		}
+				
+		// 还有注释信息，继续清除
+		if (methodContent.trim().indexOf("<--") == 0 || methodContent.trim().indexOf("/**") == 0 || methodContent.trim().indexOf("//") == 0) {
+			getMethodResultMap(methodType, methodContent.trim(), methodDescription);
+			return;
+		}
+		
+		if ("".equals(methodContent.trim())) return;
 		
 		// 防止参数里边含有{}导致解析异常
 		if (methodContent.indexOf('(') < methodContent.indexOf('{')) {
@@ -971,10 +993,90 @@ public class Vue2ToVue3Process {
 			endIndex = -1;
 		}
 		
+		Boolean isArrowMethod = false;
+		
 		// 先得到第一个方法的所有信息
 		if (endIndex == -1) {
 			
-			endIndex = TxtContentUtil.getTagEndIndex(methodContent, '{', '}') + 1;
+			endIndex = TxtContentUtil.getNotVariableIndex(methodContent, 0);
+			
+			// 箭头函数的情况
+			if (':' == methodContent.charAt(endIndex)) {
+				
+				tempText = methodContent.substring(endIndex + 1, methodContent.length());
+				
+				if (tempText.indexOf("{") > -1 && tempText.indexOf("=>") > -1 && tempText.indexOf("=>") < tempText.indexOf("{")) {
+					
+					// 参数无括号
+					if ('(' != tempText.substring(0, tempText.indexOf("=>")).trim().charAt(0)) {
+						
+						methodContent = methodContent.substring(0, endIndex + 1) + "(" + methodContent.substring(endIndex + 1, endIndex + 1 + tempText.indexOf("=>")) + tempText.substring(0, tempText.indexOf("=>")).trim() + methodContent.substring(endIndex + 1 + tempText.indexOf("=>"), methodContent.length());
+					
+						tempText = methodContent.substring(endIndex + 1, methodContent.length());
+					}
+					
+					isArrowMethod = true;
+					
+				} else {
+					
+					int startIndex = -1;
+					
+					if ('(' == tempText.trim().charAt(0)) {
+						
+						startIndex = TxtContentUtil.getTagEndIndex(tempText, '(', ')');
+						
+						if (tempText.length() > startIndex + 2 && tempText.substring(startIndex + 2, tempText.length()).trim().indexOf("=>") == 0) {
+							
+							isArrowMethod = true;
+						}
+					} else {
+						
+						tempText = tempText.trim();
+						
+						startIndex = TxtContentUtil.getNotVariableIndex(tempText, 0);
+						
+						tempText = tempText.substring(startIndex, tempText.length()).trim();
+						
+						if (tempText.indexOf("=>") == 0) {
+							// 添加参数括号
+							methodContent = methodContent.substring(0, endIndex + 1) + " (" + methodContent.substring(endIndex + 1, methodContent.indexOf("=>")).trim() + ") " + methodContent.substring(methodContent.indexOf("=>"), methodContent.length());
+							
+							isArrowMethod = true;
+						}
+						
+					}
+				}
+			}
+			
+			if (isArrowMethod && '{' != methodContent.substring(methodContent.indexOf("=>") + 2, methodContent.length()).trim().charAt(0)) {
+				
+				endIndex = methodContent.indexOf("=>");
+				
+				tempText = methodContent.substring(methodContent.indexOf("=>"), methodContent.length());
+				
+				endIndex += TxtContentUtil.getStatementEndIndex(tempText, 0);
+				
+				tempText = methodContent.substring(methodContent.indexOf("=>") + 2, endIndex);
+				
+				if ('[' == tempText.trim().charAt(0)) {
+					
+					endIndex = methodContent.indexOf("=>") + 2 + TxtContentUtil.getTagEndIndex(tempText, '[', ']');
+				} else if (tempText.indexOf(',') > -1) {
+					
+					endIndex = methodContent.indexOf("=>") + 2 + tempText.indexOf(',');
+				} else {
+					
+					endIndex++;
+				}
+				
+				isArrowMethod = true;
+			} else {
+				
+				endIndex = TxtContentUtil.getTagEndIndex(methodContent, '{', '}') + 1;
+				
+				isArrowMethod = false;
+			}
+			
 		} else {
 			
 			tempText = methodContent.substring(endIndex, methodContent.length());
@@ -996,7 +1098,16 @@ public class Vue2ToVue3Process {
 		
 		*/
 		
-		if (methodContentText.indexOf(':') > -1 && methodContentText.indexOf(':') < methodContentText.indexOf('{')) {
+		if (isArrowMethod) {
+			
+			methodName = methodContentText.substring(0, methodContentText.indexOf(':'));
+			
+			tempText = methodContentText.substring(methodContentText.indexOf('(') + 1, methodContentText.length());
+			methodParams = tempText.substring(0, tempText.indexOf(')'));
+			
+			methodBody = methodContentText.substring(methodContentText.indexOf("=>") + 2, methodContentText.length());
+			
+		} else if (methodContentText.indexOf(':') > -1 && methodContentText.indexOf(':') < methodContentText.indexOf('{')) {
 			
 			methodName = methodContentText.substring(0, methodContentText.indexOf(':'));
 			
@@ -1064,7 +1175,7 @@ public class Vue2ToVue3Process {
 		
 		tempText = methodType;
 		
-		if ("computed".equals(methodType) || "watch".equals(methodType)) {
+		if ("computed".equals(methodType) || "watch".equals(methodType) || "filters".equals(methodType)) {
 			tempText = methodType + "_" + count;
 			count++;
 		}
@@ -1072,14 +1183,14 @@ public class Vue2ToVue3Process {
 		methodResultMap.put("".equals(tempText)?methodName:tempText, methodMap);
 		
 		// 判断是否需要递归解析
-		if (methodContent.indexOf('{') > -1) {
+		if (methodContent.indexOf('{') > -1 || methodContent.indexOf("=>") > -1) {
 			
 			methodContent = methodContent.trim();
 			
 			// 第一个如果是逗号
 			if (methodContent.indexOf(',') == 0) methodContent = methodContent.substring(1, methodContent.length()).trim();
 			
-			getMethodResultMap(methodType, methodContent);
+			getMethodResultMap(methodType, methodContent, "");
 		}
 		
 	}
@@ -1602,7 +1713,7 @@ public class Vue2ToVue3Process {
 			
 			temp = methodBodyContent.substring(startIndex, methodBodyContent.length());
 			
-			// . 或者 [
+			// . 或者 [ 或者直接整个对象
 			if ('.' == temp.charAt(0)) {
 				
 				originRef = "this.$refs.";
@@ -1612,7 +1723,7 @@ public class Vue2ToVue3Process {
 				endIndex = TxtContentUtil.getNotVariableIndex(temp, 1);
 				
 				temp = temp.substring(1, endIndex);// 得到变量名
-			} else {
+			} else if ('[' == temp.charAt(0)) {
 				
 				endIndex = TxtContentUtil.getTagEndIndex(temp, '[', ']');
 				
@@ -1629,17 +1740,27 @@ public class Vue2ToVue3Process {
 				}
 				
 				replaceRef = temp;
+			} else {
+				
+				temp = templateRef;// 模板根ref
+				
+				replaceRef = temp;
+				
+				originRef = "this.$refs";
 			}
 			
-			if (!setUpReturnResultList.contains(temp)) {
+			if (!"".equals(temp)) {
 				
-				setUpReturnResultList.add(temp);
+				if (!setUpReturnResultList.contains(temp)) {
+					
+					setUpReturnResultList.add(temp);
+					
+				}
 				
+				addVue3ImportContent("vue", "ref");// 从 vue 引入 ref
+				
+				addVue3DefineContent(temp, "const " + temp + " = ref(null);", "setupDefine");
 			}
-			
-			addVue3ImportContent("vue", "ref");// 从 vue 引入 ref
-			
-			addVue3DefineContent(temp, "const " + temp + " = ref(null);", "setupDefine");
 			
 			return methodBodyContent.substring(0, startIndex).replace(originRef, replaceRef) + replaceRefInfoGetMethod(methodBodyContent.substring(startIndex, methodBodyContent.length()));
 		}
@@ -2036,7 +2157,7 @@ public class Vue2ToVue3Process {
 	public static String setTemplateChildrenWithRef(String fileContent) {
 		
 		// 存在模板标签且存在$children 引用
-		if (fileContent.indexOf("<template") > -1 && fileContent.indexOf("</template") > -1 && fileContent.indexOf("<template") < fileContent.indexOf("</template") && fileContent.indexOf("$children") > -1) {
+		if (fileContent.indexOf("<template") > -1 && fileContent.indexOf("</template") > -1 && fileContent.indexOf("<template") < fileContent.indexOf("</template") && (fileContent.indexOf("this.$ref") > -1 || fileContent.indexOf("$children") > -1)) {
 			
 			int startIndex = -1;
 			
