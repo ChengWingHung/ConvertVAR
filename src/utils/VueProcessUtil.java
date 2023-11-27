@@ -88,7 +88,7 @@ public class VueProcessUtil {
 		sourceText = sourceText.substring(sourceText.indexOf(dataDescription) + dataDescription.length(), sourceText.length()).trim();
 		
 		// 还有注释信息，继续清除
-		if (sourceText.indexOf("/**") == 0 || sourceText.indexOf("//") == 0) {
+		if (sourceText.indexOf("<--") == 0 || sourceText.indexOf("/**") == 0 || sourceText.indexOf("//") == 0) {
 			processVueDataInfo(sourceText, stateDataResultMap);
 			return;
 		}
@@ -141,14 +141,19 @@ public class VueProcessUtil {
 						endChar = '}';
 					}
 					
-					endIndex = sourceText.indexOf(':') + 1 + TxtContentUtil.getTagEndIndex(tempText, startChar, endChar) + 2;
+					endIndex = sourceText.indexOf(':') + 2 + TxtContentUtil.getTagEndIndex(tempText, startChar, endChar) + 1;
 					
 				} else {
 					
 					endIndex = sourceText.indexOf(',');
 				}
 				
+				if (endIndex > sourceText.length()) endIndex = sourceText.length();
+				
 				dataContent = sourceText.substring(0, endIndex);
+				
+				// 末尾是逗号去除
+				if (',' == dataContent.charAt(dataContent.length() - 1)) dataContent = dataContent.substring(0, dataContent.length() - 1);
 				
 				dataNextContent = sourceText.substring(endIndex, sourceText.length());
 			} else {
@@ -459,25 +464,23 @@ public class VueProcessUtil {
 		int startIndex = 0;
 		int endIndex = -1;
 		
-		startIndex = TxtContentUtil.getStringStartIndex(sourceText, "/**");
-		
-		findIndex += startIndex;
-		
-		sourceText = sourceText.substring(startIndex, sourceText.length());
-		
-		startIndex = TxtContentUtil.getStringStartIndex(sourceText, "//");
-		
-		findIndex += startIndex;
-		
-		sourceText = sourceText.substring(startIndex, sourceText.length());
-		
 		// 先获取注释信息
-		apiDescription = TxtContentUtil.getCommentInformation(sourceText);
+		apiDescription = TxtContentUtil.getCommentInformation(sourceText.trim());
 		
-		findIndex += apiDescription.length();
+		if (!"".equals(apiDescription)) {
+			
+			endIndex = sourceText.indexOf(apiDescription) + apiDescription.length();
+			
+			findIndex += endIndex;
+			
+			sourceText = sourceText.substring(endIndex, sourceText.length());
+		}
 		
 		// 还有注释信息，继续清除
-		if (sourceText.indexOf("/**") == 0 || sourceText.indexOf("//") == 0) {
+		if (sourceText.trim().indexOf("<--") == 0 || sourceText.trim().indexOf("/**") == 0 || sourceText.trim().indexOf("//") == 0) {
+			
+			startIndex = TxtContentUtil.getStringStartIndex(sourceText, sourceText.trim().substring(0, 2));
+			
 			getPropertyDetailOfObject(sourceText, recordPropertyMap, findIndex);
 			return;
 		}
@@ -489,8 +492,85 @@ public class VueProcessUtil {
 		
 		if ("".equals(sourceText.trim())) return;
 		
-		// ' " 无需处理
+		// 1. ' " 无需处理
 		if ('\'' == sourceText.trim().charAt(0) || '\"' == sourceText.trim().charAt(0)) return;
+		
+		tempText = sourceText.substring(startIndex, sourceText.length());
+		
+		endIndex = TxtContentUtil.getNotVariableIndex(tempText.trim(), 0);
+		// 2. xxx:xx=> 无需处理
+		if (endIndex > -1 && tempText.trim().length() > endIndex && ':' == tempText.trim().substring(endIndex, tempText.trim().length()).charAt(0)) {
+			
+			Boolean isArrowMethod = false;
+			
+			apiName = tempText.substring(0, tempText.indexOf(":"));
+			
+			apiNameValue = tempText.substring(tempText.indexOf(":") + 1, tempText.length());
+			
+			if ('(' == apiNameValue.trim().charAt(0)) {
+				
+				endIndex = TxtContentUtil.getTagEndIndex(apiNameValue, '(', ')');
+				
+				apiNextContent = apiNameValue.substring(endIndex + 1, apiNameValue.length());
+				
+				if (apiNextContent.trim().indexOf("=>") == 0) {
+					
+					endIndex += tempText.indexOf(":");
+					
+					isArrowMethod = true;
+				}
+			} else {
+				
+				apiNextContent = apiNameValue.trim();
+				
+				endIndex = TxtContentUtil.getNotVariableIndex(apiNextContent, 0);
+				
+				apiNextContent = apiNextContent.substring(endIndex, apiNextContent.length());
+				
+				if (apiNextContent.trim().indexOf("=>") == 0) {
+					
+					isArrowMethod = true;
+				}
+			}
+			
+			if (isArrowMethod) {
+				
+				isArrowMethod = false;
+				
+				for (String lifeCycMethod:ConvertParam.Vue2ToVue3SetUpMethodList) {
+					
+					if (apiName == lifeCycMethod) {
+						
+						isArrowMethod = true;
+						
+						break;
+					}
+				}
+				
+				for (String lifeCycMethod:ConvertParam.Vue2ToVue3LiftcycleList) {
+					
+					tempText = lifeCycMethod.indexOf(ConvertParam.CONVERT_STRING) > -1?lifeCycMethod.substring(0, lifeCycMethod.indexOf(ConvertParam.CONVERT_STRING)):lifeCycMethod;
+					
+					if (apiName == tempText) {
+						
+						isArrowMethod = true;
+						
+						break;
+					}
+				}
+				
+				if (!isArrowMethod) return;
+			}
+			
+			apiName = "";
+			
+			apiNameValue = "";
+			
+			apiNextContent = "";
+			
+			endIndex = -1;
+			
+		}
 		
 		// 无逗号，只有一个字段
 		if (sourceText.indexOf(',') < 0) {

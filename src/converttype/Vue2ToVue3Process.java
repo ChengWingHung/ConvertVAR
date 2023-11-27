@@ -761,6 +761,19 @@ public class Vue2ToVue3Process {
 		// emit 事件信息不为空
 		if (!"".equals(emitTypeDefineValue)) {
 			
+			if (!parseResultMap.containsKey("setupContext")) {
+				
+				Map<String, String> contextMap = new HashMap<>();
+				
+				parseResultMap.put("setupContext", contextMap);
+			}
+			
+			setUpContentText = "emits: [\n" + emitTypeDefineValue.substring(0, emitTypeDefineValue.length() - 1) + "\n],\n" + setUpContentText;
+		}
+		
+		// 引入context
+		if (parseResultMap.containsKey("setupContext")) {
+			
 			if (setUpContentText.indexOf("setup(props)") > -1) {
 				
 				setUpContentText = setUpContentText.replace("setup(props)", "setup(props, context)");
@@ -768,8 +781,6 @@ public class Vue2ToVue3Process {
 				
 				setUpContentText = setUpContentText.replace("setup()", "setup(context)");
 			}
-			
-			setUpContentText = "emits: [\n" + emitTypeDefineValue.substring(0, emitTypeDefineValue.length() - 1) + "\n],\n" + setUpContentText;
 		}
 		
 		if (!"".equals(tempText)) {
@@ -1072,7 +1083,13 @@ public class Vue2ToVue3Process {
 				isArrowMethod = true;
 			} else {
 				
-				endIndex = TxtContentUtil.getTagEndIndex(methodContent, '{', '}') + 1;
+				if (methodContent.indexOf('{') > -1) {
+					
+					endIndex = TxtContentUtil.getTagEndIndex(methodContent, '{', '}') + 1;
+				} else {
+					
+					endIndex = methodContent.length();
+				}
 				
 				isArrowMethod = false;
 			}
@@ -1122,9 +1139,9 @@ public class Vue2ToVue3Process {
 				
 				tempText = methodContentText.substring(methodContentText.indexOf(':') + 1, methodContentText.length());
 				
-				if (tempText.trim().indexOf("function") != 0) {
+				if (tempText.trim().indexOf("function") > -1) {
 					
-					methodContentText = methodContentText.substring(methodContentText.indexOf('{') + 1, methodContentText.length());
+					methodContentText = methodContentText.substring(methodContentText.indexOf("function") + "function".length(), methodContentText.length());
 				}
 				
 				if (methodContentText.indexOf('(') > -1) {
@@ -1145,12 +1162,35 @@ public class Vue2ToVue3Process {
 				
 				tempText = methodContentText.substring(methodContentText.indexOf('(') + 1, methodContentText.length());
 				methodParams = tempText.substring(0, tempText.indexOf(')'));
+			} else if (methodContentText.indexOf(':') > -1 && "watch".equals(methodType)) {
+				
+				methodName = methodContentText.substring(0, methodContentText.indexOf(':')).trim();
+				
+				if (!String.valueOf(methodName.charAt(0)).matches(ConvertParam.JS_VARIABLE_REG)) {
+					
+					methodName = methodName.substring(1, methodName.length() - 1);
+				}
+				
+				methodParams = "";
+				
+				tempText = methodContentText.substring(methodContentText.indexOf(':') + 1, methodContentText.length()).trim();
+				
+				if ("'\"".indexOf(tempText.charAt(0)) > -1) {
+					
+					methodBody = TxtContentUtil.getContentByTag(tempText, 0, tempText.charAt(0), tempText.charAt(0));
+					
+					methodBody = "{\n" + methodBody.substring(1, methodBody.length() - 1) + "();\n}\n";
+				}
 			}
 			
-			// 获取方法体信息
-			tempText = methodContentText.substring(methodContentText.indexOf('{'), methodContentText.length());
+			if ("".equals(methodBody)) {
+				
+				// 获取方法体信息
+				tempText = methodContentText.substring(methodContentText.indexOf('{'), methodContentText.length());
+				
+				methodBody = TxtContentUtil.getContentByTag(tempText, 0, '{', '}');
+			}
 			
-			methodBody = TxtContentUtil.getContentByTag(tempText, 0, '{', '}');
 		}
 		
 		methodContent = methodContent.substring(methodContent.indexOf(methodContentText) + methodContentText.length(), methodContent.length());
@@ -1197,8 +1237,8 @@ public class Vue2ToVue3Process {
 	
 	private static String changeComponentLifeycle(String fileContent) {
 		
-		// 1 beforeCreate -> setup()
-		// 2 created -> setup()
+		// 1 beforeCreate -> setup
+		// 2 created -> setup
 		// 3 beforeMount -> onBeforeMount
 		// 4 mounted -> onMounted
 		// 5 beforeUpdate -> onBeforeUpdate
@@ -1239,21 +1279,25 @@ public class Vue2ToVue3Process {
 					
 					vue3LiftcycleName = tempTxt.substring(tempTxt.indexOf(ConvertParam.CONVERT_STRING) + 2, tempTxt.length());
 					
-					startInex += (vue2LiftcycleName + "()").length();
+				} else {
 					
-					methodBody = TxtContentUtil.getContentByTag(fileContent, startInex, '{', '}');// 得到整个方法体
-					
-					// 组装方法信息到map对象
-					Map<String, String> methodMap = new HashMap<>();
-					
-					methodMap.put("liftcycleFunction", "true");// 生命周期函数区分标志
-					methodMap.put("methodDescription", "");
-					methodMap.put("methodName", vue3LiftcycleName);
-					methodMap.put("methodParams", "");
-					methodMap.put("methodBody", methodBody);
-					
-					methodResultMap.put(vue3LiftcycleName, methodMap);
+					vue3LiftcycleName = tempTxt;
 				}
+				
+				startInex += (vue2LiftcycleName + "()").length();
+				
+				methodBody = TxtContentUtil.getContentByTag(fileContent, startInex, '{', '}');// 得到整个方法体
+				
+				// 组装方法信息到map对象
+				Map<String, String> methodMap = new HashMap<>();
+				
+				methodMap.put("liftcycleFunction", "true");// 生命周期函数区分标志
+				methodMap.put("methodDescription", "");
+				methodMap.put("methodName", vue3LiftcycleName);
+				methodMap.put("methodParams", "");
+				methodMap.put("methodBody", methodBody);
+				
+				methodResultMap.put(vue3LiftcycleName, methodMap);
 				
 				fileContent = TxtContentUtil.deleteFirstComma(fileContent, fileContent.indexOf(vue2MethodContent) + vue2MethodContent.length());// 删除末尾的逗号
 				fileContent = fileContent.replace(vue2MethodContent, "");
@@ -1281,6 +1325,8 @@ public class Vue2ToVue3Process {
 		String vue3SetUpResultValue = "";
 		String vue3SetUpResultContent = "";
 		
+		String beforeCreateAndCreatedContent = "";
+		
 		Map<String, String> methodMap;
 		
 		// 处理函数部分
@@ -1296,10 +1342,34 @@ public class Vue2ToVue3Process {
 				
 				getAllVariableOfMethodUse(methodBodyContent);
 				
-				vue3SetUpResultValue = methodMap.get("methodName") + "(() => " + methodBodyContent + ");\n";
+				if ("created,beforeCreate".indexOf(methodMap.get("methodName")) > -1) {
+					
+					if ('{' == methodBodyContent.trim().charAt(0)) {
+						
+						methodBodyContent = methodBodyContent.substring(methodBodyContent.indexOf('{') + 1, methodBodyContent.lastIndexOf('}'));
+					}
+					
+					methodBodyContent = replaceThisKeyWordOfSetUp(methodBodyContent);
+					
+					methodBodyContent = "// generate from vue2 method of " + methodMap.get("methodName") + " start\n" + methodBodyContent + "// generate from vue2 method of " + methodMap.get("methodName") + " end\n";
+					
+					// beforeCreate 排到 created 之前
+					if ("beforeCreate".equals(methodMap.get("methodName"))) {
+						
+						beforeCreateAndCreatedContent = methodBodyContent + beforeCreateAndCreatedContent;
+					} else {
+						
+						beforeCreateAndCreatedContent += methodBodyContent;
+					}
+					
+				} else {
+					
+					vue3SetUpResultValue = methodMap.get("methodName") + "(() => " + methodBodyContent + ");\n";
+					
+					// 处理引入信息
+					addVue3ImportContent("vue", methodMap.get("methodName"));
+				}
 				
-				// 处理引入信息
-				addVue3ImportContent("vue", methodMap.get("methodName"));
 			} else {
 				
 				// watch 函数单独处理
@@ -1357,6 +1427,9 @@ public class Vue2ToVue3Process {
 				vue3SetUpResultContent += vue3SetUpResultValue;
 			}
 	    }
+		
+		// created,beforeCreate
+		vue3SetUpResultContent += beforeCreateAndCreatedContent;
 		
 		// 处理data部分
 		vue3SetUpResultContent += "return {\n";
@@ -1444,6 +1517,17 @@ public class Vue2ToVue3Process {
 		
 		// 9. this.$refs => ref
 		methodBodyContent = replaceRefInfoGetMethod(methodBodyContent);
+		
+		methodName = methodBodyContent;
+		// 10. $listeners => context.attrs
+		methodBodyContent = TxtContentUtil.replaceAll(methodBodyContent, "$listeners", "context.attrs");
+		
+		if (methodName.length() != methodBodyContent.length()) {
+			
+			Map<String, String> contextMap = new HashMap<>();
+			
+			parseResultMap.put("setupContext", contextMap);
+		}
 		
 		return methodBodyContent;
 	}
