@@ -72,15 +72,19 @@ public class Vue2ToVue3Process {
 		
 		clearInfoMap = new HashMap<>();
 		
-		ConvertLogUtil.printConvertLog("info", "解析前：\n" + parseResultContent);
+		ConvertLogUtil.printConvertLog("local", "解析前：\n" + parseResultContent);
 		
+		// 全局api处理
 		parseResultContent = changeGlobalApi(parseResultContent);
 		
+		// 全局api Treeshaking处理
 		parseResultContent = changeGlobalApiTreeshaking(parseResultContent);
 		
+		// options API -> composition API
 		parseResultContent = changeOptionApiToCompositionApi(parseResultContent);
 		
-		parseResultContent = VueProcessUtil.changeComponentPropertys(parseResultContent, parseResultMap);
+		// 组件属性转换
+		parseResultContent = changeComponentPropertys(parseResultContent, parseResultMap);
 		
 		// 国际化处理 this.$t => globalProperties.$t
 		parseResultContent = replaceIn18TmethodWithGlobalT(parseResultContent);
@@ -103,9 +107,9 @@ public class Vue2ToVue3Process {
 		parseResultContent = getVue3FileResultContent(parseResultContent);
 		
 		// 处理解析后的内容格式
-		parseResultContent = TxtContentUtil.processFileContentFormat(parseResultContent, FileOperationUtil.getFileType(parseFileName), "vue");
+		parseResultContent = processFileContentFormat(parseResultContent, FileOperationUtil.getFileType(parseFileName), "vue");
 		
-		ConvertLogUtil.printConvertLog("info", "解析后：\n" + parseResultContent);
+		ConvertLogUtil.printConvertLog("local", "解析后：\n" + parseResultContent);
 		
 		return parseResultContent;
 	}
@@ -232,13 +236,6 @@ public class Vue2ToVue3Process {
 		}
 		
 		return fileContent;
-	}
-	
-	private static void importCreateApp() {
-		
-		addVue3ImportContent("vue", "createApp");// 引入createApp
-		
-		addVue3DefineContent("app", "const app = createApp({});", "define");
 	}
 	
 	/**
@@ -925,6 +922,11 @@ public class Vue2ToVue3Process {
 		return fileContent;
 	}
 	
+	public static String changeComponentPropertys(String fileContent, Map<String, Map> parseResultMap) {
+		
+		return VueProcessUtil.changeComponentPropertys(fileContent, parseResultMap);
+	}
+	
 	private static String getMethodContent(String methodType, String optionsConfigText) {
 			
 		if (optionsConfigText.indexOf(methodType + ":") < 0) return optionsConfigText;// 没找到的情况下直接停止
@@ -988,7 +990,7 @@ public class Vue2ToVue3Process {
 		}
 				
 		// 还有注释信息，继续清除
-		if (methodContent.trim().indexOf("<--") == 0 || methodContent.trim().indexOf("/**") == 0 || methodContent.trim().indexOf("//") == 0) {
+		if (methodContent.trim().indexOf("<--") == 0 || methodContent.trim().indexOf("/*") == 0 || methodContent.trim().indexOf("//") == 0) {
 			getMethodResultMap(methodType, methodContent.trim(), methodDescription);
 			return;
 		}
@@ -1186,9 +1188,16 @@ public class Vue2ToVue3Process {
 			if ("".equals(methodBody)) {
 				
 				// 获取方法体信息
-				tempText = methodContentText.substring(methodContentText.indexOf('{'), methodContentText.length());
+				if (methodContentText.indexOf('{') > -1) {
+					
+					tempText = methodContentText.substring(methodContentText.indexOf('{'), methodContentText.length());
+					
+					methodBody = TxtContentUtil.getContentByTag(tempText, 0, '{', '}');
+				} else {
+					
+					methodBody = methodContentText;
+				}
 				
-				methodBody = TxtContentUtil.getContentByTag(tempText, 0, '{', '}');
 			}
 			
 		}
@@ -1262,8 +1271,10 @@ public class Vue2ToVue3Process {
 			
 			// 判断有无转换标志
 			if (tempTxt.indexOf(ConvertParam.CONVERT_STRING) > -1) {
+				
 				vue2LiftcycleName = tempTxt.substring(0, tempTxt.indexOf(ConvertParam.CONVERT_STRING));
 			} else {
+				
 				vue2LiftcycleName = tempTxt;
 			}
 				
@@ -1351,7 +1362,7 @@ public class Vue2ToVue3Process {
 					
 					methodBodyContent = replaceThisKeyWordOfSetUp(methodBodyContent);
 					
-					methodBodyContent = "// generate from vue2 method of " + methodMap.get("methodName") + " start\n" + methodBodyContent + "// generate from vue2 method of " + methodMap.get("methodName") + " end\n";
+					methodBodyContent = "// generated from vue2 method of " + methodMap.get("methodName") + " start\n" + methodBodyContent + "// generated from vue2 method of " + methodMap.get("methodName") + " end\n";
 					
 					// beforeCreate 排到 created 之前
 					if ("beforeCreate".equals(methodMap.get("methodName"))) {
@@ -1377,7 +1388,14 @@ public class Vue2ToVue3Process {
 					
 					getAllVariableOfMethodUse(methodBodyContent);
 					
-					vue3SetUpResultValue = "watch(" + methodMap.get("methodName") + ",(" + methodMap.get("methodParams") + ") => " + methodBodyContent + ");\n";
+					// 是否异步调用
+					if ("yes".equals(methodMap.get("isAsync"))) {
+						
+						vue3SetUpResultValue = "watch(" + methodMap.get("methodName") + ", async (" + methodMap.get("methodParams") + ") => " + methodBodyContent + ");\n";
+					} else {
+						
+						vue3SetUpResultValue = "watch(" + methodMap.get("methodName") + ", (" + methodMap.get("methodParams") + ") => " + methodBodyContent + ");\n";
+					}
 					
 					addVue3ImportContent("vue", "watch");
 				} 
@@ -1390,7 +1408,13 @@ public class Vue2ToVue3Process {
 					methodBodyContent = processComputedSetOrGetFunc(methodBodyContent, "set");
 					methodBodyContent = processComputedSetOrGetFunc(methodBodyContent, "get");
 					
-					vue3SetUpResultValue += "const " + methodMap.get("methodName") + " = computed(() => " + methodBodyContent + ");\n";
+					if (methodBodyContent.indexOf("set(") > -1 || methodBodyContent.indexOf("get(") > -1) {
+						
+						vue3SetUpResultValue += "const " + methodMap.get("methodName") + " = computed(" + methodBodyContent + ");\n";
+					} else {
+						
+						vue3SetUpResultValue += "const " + methodMap.get("methodName") + " = computed(() => " + methodBodyContent + ");\n";
+					}
 					
 					addVue3ImportContent("vue", "computed");
 				} else {
@@ -1519,6 +1543,7 @@ public class Vue2ToVue3Process {
 		methodBodyContent = replaceRefInfoGetMethod(methodBodyContent);
 		
 		methodName = methodBodyContent;
+		
 		// 10. $listeners => context.attrs
 		methodBodyContent = TxtContentUtil.replaceAll(methodBodyContent, "$listeners", "context.attrs");
 		
@@ -1843,6 +1868,7 @@ public class Vue2ToVue3Process {
 				
 				addVue3ImportContent("vue", "ref");// 从 vue 引入 ref
 				
+				// 此处得到的ref temp变量可能不符合变量命名要求，待处理
 				addVue3DefineContent(temp, "const " + temp + " = ref(null);", "setupDefine");
 			}
 			
@@ -1864,8 +1890,10 @@ public class Vue2ToVue3Process {
 		Map<String, String> defineMap;
 		
 		if (parseResultMap.containsKey(defineType)) {
+			
 			defineMap = parseResultMap.get(defineType);
 		} else {
+			
 			defineMap= new HashMap<>();
 		}
 		
@@ -1894,22 +1922,30 @@ public class Vue2ToVue3Process {
 		Map<String, ArrayList> importMap;
 		
 		if (parseResultMap.containsKey(ConvertParam.IMPORT_FLG)) {
+			
 			importMap = parseResultMap.get(ConvertParam.IMPORT_FLG);
 		} else {
+			
 			importMap= new HashMap<>();
 		}
 		
 		ArrayList<String> importList;
 		
 		if (importMap.containsKey(fromKey)) {
+			
 			importList = importMap.get(fromKey);
+			
 			if (!importList.contains(importContent)) {
+				
 				importList.add(importContent);
 			} else {
+				
 				hasExist = true;
 			}
 		} else {
+			
 			importList = new ArrayList<String>();
+			
 			importList.add(importContent);
 		}
 		
@@ -2028,7 +2064,6 @@ public class Vue2ToVue3Process {
 	
 	private static String processVue3DefineContent(String fileContent) {
 		
-		String tempText = "";
 		String vue3DefineContent = "";// 单条定义内容
 		String vue3ParsePartDefineContent = "";// 解析出来部分需要拼接到原内容上的所有定义内容
 		
@@ -2288,6 +2323,18 @@ public class Vue2ToVue3Process {
 		fileContent = processVue3DefineContent(fileContent);
 		
 		return fileContent;
+	}
+	
+	private static String processFileContentFormat(String sourceText, String fileType, String framworkName) {
+		
+		return TxtContentUtil.processFileContentFormat(sourceText, fileType, framworkName);
+	}
+	
+	private static void importCreateApp() {
+		
+		addVue3ImportContent("vue", "createApp");// 引入createApp
+		
+		addVue3DefineContent("app", "const app = createApp({});", "define");
 	}
 	
 }

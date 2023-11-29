@@ -25,6 +25,8 @@ public class ReactClassToFuncProcess {
 	private static Map<String, Map> parseResultMap;// 解析后的信息存储对象
 	
 	private static Map<String, Map<String, String>> classPropsResultMap;// class props map
+	
+	private static String classCreateType;// 创建class 组件的方式
 
 	public ReactClassToFuncProcess() {
 		
@@ -45,7 +47,17 @@ public class ReactClassToFuncProcess {
 		
 		ReactProcessUtil.callBackMethodMap = new HashMap<>();
 		
-		ConvertLogUtil.printConvertLog("info", "解析前：\n" + parseResultContent);
+		if (parseResultContent.indexOf("React.createClass(") > -1) {
+			
+			classCreateType = "creacteClass";
+			
+			return parseResultContent;// 暂不处理
+		} else {
+			
+			classCreateType = "extendClass";
+		}
+		
+		ConvertLogUtil.printConvertLog("local", "解析前：\n" + parseResultContent);
 		
 		parseResultContent = getReactFormCreateContent(parseResultContent);
 		
@@ -67,7 +79,7 @@ public class ReactClassToFuncProcess {
 		
 		parseReactResultContent = ReactProcessUtil.processFileContentFormat(parseReactResultContent);
 		
-		ConvertLogUtil.printConvertLog("info", "解析后：\n" + parseReactResultContent);
+		ConvertLogUtil.printConvertLog("local", "解析后：\n" + parseReactResultContent);
 		
 		return parseReactResultContent;
 	}

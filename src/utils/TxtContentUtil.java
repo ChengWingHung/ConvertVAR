@@ -59,10 +59,75 @@ public class TxtContentUtil {
 	 */
 	public static int getTagEndIndex(String sourceText, char startTag, char endTag) {
 		
+		String tempText = "";
+		
 		int startIndex = 0;
 		int endIndex = 0;
 		
 		for (int i=0;i<sourceText.length();i++) {
+			
+			// 去除注释的情况 <-- --> /* */ //
+			if (i < (sourceText.length() - 3) && sourceText.charAt(i) != startTag && "<--".equals(sourceText.substring(i, i+3))) {
+				
+				tempText = sourceText.substring(i, sourceText.length());
+				
+				i += tempText.indexOf("-->") + 4;
+			}
+			
+			if (i < (sourceText.length() - 2) && sourceText.charAt(i) != startTag && "/*".equals(sourceText.substring(i, i+2))) {
+				
+				tempText = sourceText.substring(i, sourceText.length());
+				
+				i += tempText.indexOf("*/") + 3;
+			}
+
+			if (i < (sourceText.length() - 2) && sourceText.charAt(i) != startTag && "//".equals(sourceText.substring(i, i+2))) {
+				
+				tempText = sourceText.substring(0, i);
+				// 非http://的情况
+				if (':' != tempText.trim().charAt(tempText.trim().length() - 1)) {
+					
+					tempText = sourceText.substring(i, sourceText.length());
+					
+					i += tempText.indexOf("\n") > -1?tempText.indexOf("\n"):tempText.length() + 1;
+				}
+				
+			}
+			
+			// 去除字符串内的情况 ' " `
+			if ("'\"`".indexOf(startTag) < 0 && "'\"`".indexOf(sourceText.charAt(i)) > -1) {
+				
+				tempText = sourceText.substring(i, sourceText.length());
+				
+				tempText = tempText.substring(0, getTagEndIndex(tempText, sourceText.charAt(i), sourceText.charAt(i)) + 1);
+				
+				i += tempText.length();
+			}
+			
+			if (i >= sourceText.length()) {
+				break;
+			}
+			
+			// 去除()的情况
+			if ('(' != startTag && '(' == sourceText.charAt(i)) {
+				
+				tempText = sourceText.substring(i, sourceText.length());
+				
+				tempText = tempText.substring(0, getTagEndIndex(tempText, '(', ')') + 1);
+				
+				i += tempText.length();
+			}
+				
+			// 去除正则的情况
+			if ((i+1) < sourceText.length() && '=' == sourceText.charAt(i)) {
+				
+				tempText = sourceText.substring(i + 1, sourceText.length());
+				
+				if ('/' == tempText.trim().charAt(0)) {
+					
+					i += getTagEndIndex(tempText, '/', '/') + 1;
+				}
+			}
 			
 			if (sourceText.charAt(i) == startTag) {
 				startIndex++;
@@ -76,6 +141,38 @@ public class TxtContentUtil {
 			} else {
 				
 				if (sourceText.charAt(i) == endTag) {
+					endIndex++;
+				}
+				
+				if (startIndex != 0 && startIndex == endIndex) {
+					endIndex = i;
+					break;
+				}
+			}
+		}
+		
+		return endIndex;
+	}
+	
+	public static int getTagStringEndIndex(String sourceText, String startTag, String endTag) {
+		
+		int startIndex = 0;
+		int endIndex = 0;
+		
+		for (int i=0;i<sourceText.length();i++) {
+			
+			if (i < (sourceText.length() - startTag.length()) && startTag.equals(sourceText.substring(i, i + startTag.length()))) {
+				startIndex++;
+			}
+			
+			if (startTag.equals(endTag)) {
+				if (startIndex == 2) {
+					endIndex = i;
+					break;
+				}
+			} else {
+				
+				if (i < (sourceText.length() - endTag.length()) && endTag.equals(sourceText.substring(i, i + endTag.length()))) {
 					endIndex++;
 				}
 				
@@ -214,13 +311,13 @@ public class TxtContentUtil {
 			
 			commentDescription = tempText.substring(0, tempText.indexOf("-->") + 3);
 			
-		} else if (sourceText.indexOf("/**") == 0) {
+		} else if (sourceText.indexOf("/*") == 0) {
 			
-			tempText = sourceText.substring(sourceText.indexOf("/**"), sourceText.length());
+			tempText = sourceText.substring(sourceText.indexOf("/*"), sourceText.length());
 			
-			endIndex = TxtContentUtil.getTagEndIndex(sourceText, '/', '/') + 1;
+			endIndex = getTagStringEndIndex(sourceText, "/*", "*/") + 2;
 			
-			commentDescription = sourceText.substring(sourceText.indexOf("/**"), endIndex);
+			commentDescription = sourceText.substring(sourceText.indexOf("/*"), endIndex);
 			
 		} else if (sourceText.indexOf("//") == 0) {
 			
@@ -281,7 +378,7 @@ public class TxtContentUtil {
 			}
 		}
 		
-		return index;
+		return index == -1?sourceText.length():index;
 	}
 	
 	/**
@@ -659,7 +756,7 @@ public class TxtContentUtil {
 		startIndex += dataDescription.length();
 		
 		// 还有注释信息，继续清除
-		if (tempTxt.indexOf("<--") == 0 || tempTxt.indexOf("/**") == 0 || tempTxt.indexOf("//") == 0) {
+		if (tempTxt.indexOf("<--") == 0 || tempTxt.indexOf("/*") == 0 || tempTxt.indexOf("//") == 0) {
 			
 			startIndex += sourceText.indexOf(tempTxt.substring(0, 2));
 			
@@ -853,7 +950,7 @@ public class TxtContentUtil {
 				
 				tempText = fileContent.substring(endIndex, fileContent.length());
 				
-				tempText = tempText.substring(0, TxtContentUtil.getStatementEndIndex(tempText, 0));
+				tempText = tempText.substring(0, getStatementEndIndex(tempText, 0));
 				
 				replaceContent += tempText;
 				
@@ -888,7 +985,7 @@ public class TxtContentUtil {
 		sourceText = sourceText.substring(sourceText.indexOf(dataDescription) + dataDescription.length(), sourceText.length()).trim();
 		
 		// 还有注释信息，继续清除
-		if (sourceText.indexOf("<--") == 0 || sourceText.indexOf("/**") == 0 || sourceText.indexOf("//") == 0) {
+		if (sourceText.indexOf("<--") == 0 || sourceText.indexOf("/*") == 0 || sourceText.indexOf("//") == 0) {
 			getDefineVariable(sourceText, variableNameList);
 			return;
 		}

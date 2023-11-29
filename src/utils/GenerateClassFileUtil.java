@@ -14,11 +14,7 @@ public class GenerateClassFileUtil {
 	public static String VuexMethodContent = "\n" + 
 			"import { reactive, computed } from \"vue\";\n" + 
 			"import { useStore , mapState, mapGetters, createNamespacedHelpers } from \"vuex\";\n" + 
-			"\n" + 
-			"export {\n" + 
-			"    mapStates, mapGetter, mapMutations, mapActions\n" + 
-			"}\n" + 
-			"\n" + 
+			"\n" +  
 			"// 组合mapState和mapGetters\n" + 
 			"function useMapper(data, mapFn) {\n" + 
 			"    const store = useStore()\n" + 
@@ -109,5 +105,8 @@ public class GenerateClassFileUtil {
 			"    }\n" + 
 			"    console.error(\"使用方法有误，请检查输入参数的格式！\")\n" + 
 			"    return null\n" + 
-			"}\n";
+			"}\n" +
+			"\n" + 
+			"export { mapStates, mapGetter, mapMutations, mapActions }\n" + 
+			"\n";
 }

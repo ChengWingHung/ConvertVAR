@@ -10,7 +10,7 @@ public class ConvertLogUtil {
 	
 	public static void printConvertLog(String type, String logContent) {
 		
-		if (ConvertParam.IS_DEV_FLAG) {
+		if (ConvertParam.IS_DEV_FLAG || "local".equals(type)) {
 			
 			System.out.println(type + ":" + logContent);
 		} else {

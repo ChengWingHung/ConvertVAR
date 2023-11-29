@@ -28,6 +28,7 @@ public class VueProcessUtil {
 		String propContent = "";
 		
 		tempText = propDescription;
+		
 		// 先获取注释信息
 		propDescription = TxtContentUtil.getCommentInformation(sourceText);
 		
@@ -36,16 +37,33 @@ public class VueProcessUtil {
 		if (!"".equals(tempText)) propDescription += "\n" + tempText;
 		
 		// 还有注释信息，继续清除
-		if (sourceText.indexOf("<--") == 0 || sourceText.indexOf("/**") == 0 || sourceText.indexOf("//") == 0) {
+		if (sourceText.indexOf("<--") == 0 || sourceText.indexOf("/*") == 0 || sourceText.indexOf("//") == 0) {
 			processVuePropsInfo(sourceText, propsResultMap, propDescription);
 			return;
 		}
 		
 		propName = sourceText.substring(0, sourceText.indexOf(':'));
 		
-		tempText = sourceText.substring(sourceText.indexOf(':') + 1, sourceText.length()).trim();
+		tempText = sourceText.substring(sourceText.indexOf(':') + 1, sourceText.length());
 		
-		propContent = TxtContentUtil.getContentByTag(sourceText, 0, tempText.charAt(0), tempText.charAt(0) == '{'?'}':tempText.charAt(0));
+		// 直接是类型定义
+		if (String.valueOf(tempText.trim().charAt(0)).matches(ConvertParam.JS_VARIABLE_REG)) {
+			
+			int startIndex = TxtContentUtil.getVariableStartIndex(tempText, 0);
+			
+			propContent = propName + ":" + tempText.substring(0, startIndex);
+			
+			tempText = tempText.trim();
+			
+			tempText = tempText.substring(0, TxtContentUtil.getNotVariableIndex(tempText, 0));
+			 
+			propContent += tempText;
+		} else {
+			
+			tempText = tempText.trim();
+			
+			propContent = TxtContentUtil.getContentByTag(sourceText, 0, tempText.charAt(0), tempText.charAt(0) == '{'?'}':(tempText.charAt(0) == '['?']':tempText.charAt(0)));
+		}
 		
 		propDefineValue = propContent.substring(propContent.indexOf(':') + 1, propContent.length());
 		
@@ -88,7 +106,7 @@ public class VueProcessUtil {
 		sourceText = sourceText.substring(sourceText.indexOf(dataDescription) + dataDescription.length(), sourceText.length()).trim();
 		
 		// 还有注释信息，继续清除
-		if (sourceText.indexOf("<--") == 0 || sourceText.indexOf("/**") == 0 || sourceText.indexOf("//") == 0) {
+		if (sourceText.indexOf("<--") == 0 || sourceText.indexOf("/*") == 0 || sourceText.indexOf("//") == 0) {
 			processVueDataInfo(sourceText, stateDataResultMap);
 			return;
 		}
@@ -112,9 +130,11 @@ public class VueProcessUtil {
 			dataContent = sourceText.trim();
 			
 			// 末尾存在备注信息，在备注信息前加逗号
-			if (sourceText.indexOf("/**") > -1) {
-				dataContent = dataContent.substring(0, sourceText.indexOf("/**")).trim() + "," + dataContent.substring(sourceText.indexOf("/**"), dataContent.length());
+			if (sourceText.indexOf("/*") > -1) {
+				
+				dataContent = dataContent.substring(0, sourceText.indexOf("/*")).trim() + "," + dataContent.substring(sourceText.indexOf("/*"), dataContent.length());
 			} else if (sourceText.indexOf("//") > -1) {
+				
 				dataContent = dataContent.substring(0, sourceText.indexOf("//")).trim() + "," + dataContent.substring(sourceText.indexOf("//"), dataContent.length());
 			}
 			
@@ -136,8 +156,10 @@ public class VueProcessUtil {
 					char endChar = tempText.charAt(0);
 					
 					if ('[' == startChar) {
+						
 						endChar = ']';
 					} else if ('{' == startChar) {
+						
 						endChar = '}';
 					}
 					
@@ -220,7 +242,9 @@ public class VueProcessUtil {
 			for (int i=tempTxt.length()-1;i>-1;i--) {
 				
 				if (':' == tempTxt.charAt(i)) {
+					
 					startIndex = i;
+					
 					break;
 				}
 			}
@@ -335,11 +359,14 @@ public class VueProcessUtil {
 		for (int i = 0;i<tempTxt.length();i++) {
 			
 			if (!String.valueOf(tempTxt.charAt(i)).matches(ConvertParam.JS_VARIABLE_REG)) {
+				
 				endIndex = i;
+				
 				break;
 			}
 			
 			if (i == tempTxt.length() - 1 && endIndex == -1) {
+				
 				endIndex = tempTxt.length();
 			}
 		}
@@ -477,11 +504,12 @@ public class VueProcessUtil {
 		}
 		
 		// 还有注释信息，继续清除
-		if (sourceText.trim().indexOf("<--") == 0 || sourceText.trim().indexOf("/**") == 0 || sourceText.trim().indexOf("//") == 0) {
+		if (sourceText.trim().indexOf("<--") == 0 || sourceText.trim().indexOf("/*") == 0 || sourceText.trim().indexOf("//") == 0) {
 			
 			startIndex = TxtContentUtil.getStringStartIndex(sourceText, sourceText.trim().substring(0, 2));
 			
 			getPropertyDetailOfObject(sourceText, recordPropertyMap, findIndex);
+			
 			return;
 		}
 		
@@ -643,8 +671,10 @@ public class VueProcessUtil {
 						char endChar = startChar;
 						
 						if ('[' == startChar) {
+							
 							endChar = ']';
 						} else if ('{' == startChar) {
+							
 							endChar = '}';
 						}
 						
@@ -727,7 +757,9 @@ public class VueProcessUtil {
 					for (int i=0;i<apiNextContent.length();i++) {
 						
 						if (',' == apiNextContent.charAt(i)) {
+							
 							startIndex = i;
+							
 							break;
 						}
 					}
@@ -1132,7 +1164,21 @@ public class VueProcessUtil {
 	 */
 	public static Boolean isVue3FileContent(String sourceText) {
 		
-		return sourceText.indexOf("createApp") > -1 || sourceText.indexOf("setup(") > -1;
+		Boolean isVue3File = false;
+		
+		if (sourceText.indexOf("createApp") > -1) {
+			
+			isVue3File = true;
+		} else if (sourceText.indexOf("setup(") > -1) {
+			
+			String tempText = sourceText.substring(sourceText.indexOf("setup("), sourceText.length());
+			
+			tempText = tempText.substring(0, TxtContentUtil.getTagEndIndex(tempText, '(', ')'));
+			
+			isVue3File = tempText.indexOf("return") > -1;
+		}
+		
+		return isVue3File;
 	}
 	
 }

@@ -54,7 +54,7 @@ public class ReactProcessUtil {
 		methodContent = methodContent.trim();
 			
 		// 还有注释信息，继续清除
-		if (methodContent.indexOf("<--") == 0 || methodContent.indexOf("/**") == 0 || methodContent.indexOf("//") == 0) {
+		if (methodContent.indexOf("<--") == 0 || methodContent.indexOf("/*") == 0 || methodContent.indexOf("//") == 0) {
 			getMethodResultMap(methodContent, methodDescription, methodResultMap);
 			return;
 		}
@@ -160,7 +160,7 @@ public class ReactProcessUtil {
 		int startIndex = 0;
 		int endIndex = -1;
 		
-		startIndex = TxtContentUtil.getStringStartIndex(sourceText, "/**");
+		startIndex = TxtContentUtil.getStringStartIndex(sourceText, "/*");
 		
 		findIndex += startIndex;
 		
@@ -178,7 +178,7 @@ public class ReactProcessUtil {
 		findIndex += apiDescription.length();
 		
 		// 还有注释信息，继续清除
-		if (sourceText.indexOf("<--") == 0 || sourceText.indexOf("/**") == 0 || sourceText.indexOf("//") == 0) {
+		if (sourceText.indexOf("<--") == 0 || sourceText.indexOf("/*") == 0 || sourceText.indexOf("//") == 0) {
 			getPropertyDetailOfObject(sourceText, recordPropertyMap, findIndex);
 			return;
 		}
@@ -1347,6 +1347,6 @@ public class ReactProcessUtil {
 	 */
 	public static Boolean isReactClassFileContent(String sourceText) {
 		
-		return sourceText.indexOf("class ") == 0 || (sourceText.indexOf("class ") > 0 && !String.valueOf(sourceText.charAt(sourceText.indexOf("class ") - 1)).matches(ConvertParam.JS_VARIABLE_REG));
+		return sourceText.indexOf("class ") == 0 || (sourceText.indexOf("class ") > 0 && !String.valueOf(sourceText.charAt(sourceText.indexOf("class ") - 1)).matches(ConvertParam.JS_VARIABLE_REG)) || sourceText.indexOf("React.createClass(") > -1;
 	}
 }
