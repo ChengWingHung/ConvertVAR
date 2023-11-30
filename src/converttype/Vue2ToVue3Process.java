@@ -786,7 +786,11 @@ public class Vue2ToVue3Process {
 			
 			setUpContentText += "}\n";
 			
-			optionsConfigText = optionsConfigText.substring(0, optionsConfigText.lastIndexOf('}')) + setUpContentText + "}";// 将setup信息拼接到末尾
+			tempText = optionsConfigText.substring(0, optionsConfigText.lastIndexOf('}'));
+			
+			if ('{' != tempText.trim().charAt(tempText.trim().length() - 1) && ',' != tempText.trim().charAt(tempText.trim().length() - 1)) tempText += ",\n";
+			
+			optionsConfigText = tempText + setUpContentText + "}";// 将setup信息拼接到末尾
 		}
 		
 		optionsConfigTextBak = optionsConfigTextBak.replace(optionsConfigTextBak, optionsConfigText);
@@ -1328,9 +1332,11 @@ public class Vue2ToVue3Process {
 				
 				vue2LiftcycleName = tempTxt;
 			}
+			
+			vue2LiftcycleName = VueProcessUtil.getExistFunction(fileContent, vue2LiftcycleName);
 				
 			// 判断是否有对应生命周期函数
-			if (fileContent.indexOf(vue2LiftcycleName + "()") > -1) {
+			if (!"".equals(vue2LiftcycleName) && fileContent.indexOf(vue2LiftcycleName + "()") > -1) {
 				
 				startInex = fileContent.indexOf(vue2LiftcycleName + "()");
 				

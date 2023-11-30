@@ -1169,6 +1169,28 @@ public class VueProcessUtil {
 		return fileContent;
 	}
 	
+	public static String getExistFunction(String fileContent, String funcName) {
+		
+		String tempText = "";
+		String functionNameResult = "";
+		
+		if (fileContent.indexOf(funcName) > -1) {
+			
+			tempText = fileContent.substring(fileContent.indexOf(funcName) + funcName.length(), fileContent.length());
+			
+			if ('(' == tempText.trim().charAt(0)) {
+				
+				functionNameResult = funcName + tempText.substring(0, tempText.indexOf('('));
+			} else if (tempText.indexOf(funcName) > -1) {
+				
+				return getExistFunction(tempText, funcName);
+			}
+		}
+		
+		return functionNameResult;
+	}
+		
+	
 	/**
 	 * 判断文件内容是否已经是vue3 版本
 	 * 
@@ -1179,7 +1201,10 @@ public class VueProcessUtil {
 		
 		Boolean isVue3File = false;
 		
-		if (sourceText.indexOf("createApp") > -1) {
+		if (sourceText.indexOf("e.__esModule") > -1 || (sourceText.indexOf(".apply(") > -1 && sourceText.indexOf(".call(") > -1)) {
+			
+			isVue3File = true;// 编译后的资源
+		} else if (sourceText.indexOf("createApp") > -1) {
 			
 			isVue3File = true;
 		} else if (sourceText.indexOf("setup(") > -1) {
