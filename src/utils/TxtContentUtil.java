@@ -129,6 +129,10 @@ public class TxtContentUtil {
 				}
 			}
 			
+			if (i >= sourceText.length()) {
+				break;
+			}
+			
 			if (sourceText.charAt(i) == startTag) {
 				startIndex++;
 			}

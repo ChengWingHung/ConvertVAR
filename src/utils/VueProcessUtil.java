@@ -690,6 +690,16 @@ public class VueProcessUtil {
 							
 						}
 						
+					} else if (String.valueOf(startChar).matches(ConvertParam.JS_VARIABLE_REG)) {
+						
+						endIndex = TxtContentUtil.getNotVariableIndex(tempText.trim(), 0);
+						
+						if ('(' == tempText.trim().charAt(endIndex)) {
+							
+							endIndex = TxtContentUtil.getTagEndIndex(tempText, '(', ')');
+							
+							endIndex += sourceText.indexOf(charTypeValue) + 2;
+						}
 					} else {
 						
 						endIndex = sourceText.indexOf(',');
@@ -1069,6 +1079,9 @@ public class VueProcessUtil {
 			if ("...".equals(tempText.substring(tempText.length() - 3, tempText.length()))) {
 				
 				replaceContent = "..." + replaceContent;
+				
+				methodContent = methodContent.replace(replaceContent, "");
+			} else {
 				
 				methodContent = methodContent.replace(replaceContent, "");
 			}
