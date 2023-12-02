@@ -1354,8 +1354,26 @@ public class ReactProcessUtil {
 			
 			if ('(' == tempText.charAt(tempText.length() - 1)) {
 				
-				packageName = tempText.substring(tempText.lastIndexOf(' '), tempText.length() - 1);
-			} else {
+				tempText = tempText.substring(tempText.lastIndexOf(' '), tempText.length() - 1).trim();
+				
+				Boolean isVariable = true;
+				
+				for (int i=0;i<tempText.length();i++) {
+					
+					if (!String.valueOf(tempText.charAt(i)).matches(ConvertParam.JS_VARIABLE_REG)) {
+						
+						isVariable = false;
+						break;
+					}
+				}
+				
+				if (isVariable) {
+					
+					packageName = tempText;
+				}
+			} 
+			
+			if ("".equals(packageName)) {
 				
 				tempText = sourceText.substring(sourceText.indexOf(className) + className.length(), sourceText.length());
 				
