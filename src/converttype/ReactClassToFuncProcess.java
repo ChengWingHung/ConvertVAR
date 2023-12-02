@@ -47,6 +47,8 @@ public class ReactClassToFuncProcess {
 		
 		ReactProcessUtil.callBackMethodMap = new HashMap<>();
 		
+		ReactProcessUtil.callBackCount = 0;
+		
 		if (parseResultContent.indexOf("React.createClass(") > -1) {
 			
 			classCreateType = "creacteClass";
@@ -59,11 +61,15 @@ public class ReactClassToFuncProcess {
 		
 		ConvertLogUtil.printConvertLog("local", "解析前：\n" + parseResultContent);
 		
+		String originParseContent = parseResultContent;
+		
 		parseResultContent = getReactFormCreateContent(parseResultContent);
 		
 		getImportAndDefineContent(parseResultContent);
 		
 		parseResultContent = getReactClassName(parseResultContent);
+		
+		getPackageClassName(originParseContent);
 		
 		parseResultContent = parseResultContent.substring(parseResultContent.indexOf('{'), parseResultContent.lastIndexOf('}') + 1);
 		
@@ -125,6 +131,8 @@ public class ReactClassToFuncProcess {
 		
 		tempText = tempText.substring(0, TxtContentUtil.getNotVariableIndex(tempText, 0));
 		
+		tempText = String.valueOf(tempText.charAt(0)).toUpperCase() + tempText.substring(1, tempText.length());// 首字母要大写
+		
 		Map<String, String> classNameMap = new HashMap<>();
 		
 		classNameMap.put("contentValue", tempText);
@@ -151,6 +159,32 @@ public class ReactClassToFuncProcess {
 		
 		return parseResultContent;
 		
+	}
+	
+	public static void getPackageClassName(String parseResultContent) {
+		
+		String tempText = "";
+		String packageClassName = "";
+		
+		tempText = parseResultContent.substring(0, parseResultContent.indexOf("class ")).trim();
+		
+		// 判断class 前面是否有括号
+		if ('(' == tempText.charAt(tempText.length() - 1)) {
+			
+			packageClassName = tempText.substring(tempText.lastIndexOf(' '), tempText.length() - 1);
+		}
+		
+		// 判断类名前面是否有括号
+		if ("".equals(packageClassName)) packageClassName = ReactProcessUtil.getClassPackageInfo(parseResultContent, (String)parseResultMap.get("className").get("contentValue"));
+		
+		if (!"".equals(packageClassName)) {
+			
+			Map<String, String> packageNameMap = new HashMap<>();
+			
+			packageNameMap.put("contentValue", packageClassName);
+			
+			parseResultMap.put("packageClassName", packageNameMap);
+		}
 	}
 	
 	/**
@@ -436,6 +470,13 @@ public class ReactClassToFuncProcess {
 			formCreateContent = (String)parseResultMap.get("formCreate").get("formContent");
 		}
 		
+		String packageClassName = "";
+		
+		if (parseResultMap.containsKey("packageClassName")) {
+			
+			packageClassName = (String)parseResultMap.get("packageClassName").get("contentValue");
+		}
+		
 		// React.memo
 		if (classPropsResultMap.containsKey(ConvertParam.ReactClassLifeMethodList[6])) {
 			
@@ -447,7 +488,15 @@ public class ReactClassToFuncProcess {
 				
 				if ("".equals(formCreateContent)) {
 					
-					parseReactResultContent += String.valueOf(parseResultMap.get("domRender").get("renderContent")).replace(fcName, "Memo" + fcName);
+					if (!"".equals(packageClassName)) {
+						
+						tempText = packageClassName + "(Memo" + fcName + ")";
+					} else {
+						
+						tempText = "Memo" + fcName;
+					}
+					
+					parseReactResultContent += String.valueOf(parseResultMap.get("domRender").get("renderContent")).replace(fcName, tempText);
 				} else {
 					
 					if ("".equals(formOption)) {
@@ -458,14 +507,29 @@ public class ReactClassToFuncProcess {
 						parseReactResultContent += "const FormMemo" + fcName + " = Form.create(" + formOption + ")(Memo" + fcName + ");";
 					}
 					
-					parseReactResultContent += String.valueOf(parseResultMap.get("domRender").get("renderContent")).replace(fcName, "FormMemo" + fcName);
+					if (!"".equals(packageClassName)) {
+						
+						tempText = packageClassName + "(FormMemo" + fcName + ")";
+					} else {
+						
+						tempText = "FormMemo" + fcName;
+					}
+					
+					parseReactResultContent += String.valueOf(parseResultMap.get("domRender").get("renderContent")).replace(fcName, tempText);
 				}
 				
 			} else {
 				
 				if ("".equals(formCreateContent)) {
 					
-					parseReactResultContent += "\n" + "export default Memo" + fcName + ";\n";
+					if (!"".equals(packageClassName)) {
+						
+						parseReactResultContent += "\n" + "export default " + packageClassName + "(Memo" + fcName + ");\n";
+					} else {
+						
+						parseReactResultContent += "\n" + "export default Memo" + fcName + ";\n";
+					}
+					
 				} else {
 					
 					if ("".equals(formOption)) {
@@ -476,7 +540,13 @@ public class ReactClassToFuncProcess {
 						parseReactResultContent += "const FormMemo" + fcName + " = Form.create(" + formOption + ")(Memo" + fcName + ");";
 					}
 					
-					parseReactResultContent += "\n" + "export default FormMemo" + fcName + ";\n";
+					if (!"".equals(packageClassName)) {
+						
+						parseReactResultContent += "\n" + "export default " + packageClassName + "(FormMemo" + fcName + ");\n";
+					} else {
+						
+						parseReactResultContent += "\n" + "export default FormMemo" + fcName + ";\n";
+					}
 				}
 			}
 		} else if (parseResultMap.containsKey("domRender")) {
@@ -494,14 +564,28 @@ public class ReactClassToFuncProcess {
 					parseReactResultContent += "const Form" + fcName + " = Form.create(" + formOption + ")(" + fcName + ");";
 				}
 				
-				parseReactResultContent += String.valueOf(parseResultMap.get("domRender").get("renderContent")).replace(fcName, "Form" + fcName);
+				if (!"".equals(packageClassName)) {
+					
+					tempText = packageClassName + "(Form" + fcName + ")";
+				} else {
+					
+					tempText = "Form" + fcName;
+				}
+				
+				parseReactResultContent += String.valueOf(parseResultMap.get("domRender").get("renderContent")).replace(fcName, tempText);
 			}
 			
 		} else {
 			
 			if ("".equals(formCreateContent)) {
 				
-				parseReactResultContent += "\n" + "export default " + fcName + ";\n";
+				if (!"".equals(packageClassName)) {
+					
+					parseReactResultContent += "\n" + "export default " + packageClassName + "(" + fcName + ");\n";
+				} else {
+					
+					parseReactResultContent += "\n" + "export default " + fcName + ";\n";
+				}
 			} else {
 				
 				if ("".equals(formOption)) {
@@ -512,7 +596,14 @@ public class ReactClassToFuncProcess {
 					parseReactResultContent += "const Form" + fcName + " = Form.create(" + formOption + ")(" + fcName + ");";
 				}
 				
-				parseReactResultContent += "\n" + "export default Form" + fcName + ";\n";
+				if (!"".equals(packageClassName)) {
+					
+					parseReactResultContent += "\n" + "export default " + packageClassName + "(Form" + fcName + ");\n";
+				} else {
+					
+					parseReactResultContent += "\n" + "export default Form" + fcName + ";\n";
+				}
+				
 			}
 			
 		}

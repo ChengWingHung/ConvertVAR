@@ -18,7 +18,7 @@ public class ReactProcessUtil {
 	
 	private static ArrayList<String> variableNameList;
 	
-	private static int callBackCount = 0;
+	public static int callBackCount = 0;
 	
 	private static String replaceContent = "";
 	
@@ -67,13 +67,13 @@ public class ReactProcessUtil {
 			
 			methodContent = methodContent.substring(endIndex, methodContent.length()).trim();
 				
-			if ('=' == methodContent.charAt(0) && '>' != methodContent.charAt(1)) {
+			if (methodContent.length() > 0 && '=' == methodContent.charAt(0) && '>' != methodContent.charAt(1)) {
 				
 				methodContent = methodContent.substring(1, methodContent.length()).trim();
 			}
 			
 			// 说明有参数
-			if ('(' == methodContent.charAt(0)) {
+			if (methodContent.length() > 0 && '(' == methodContent.charAt(0)) {
 				
 				endIndex = TxtContentUtil.getTagEndIndex(methodContent, '(', ')');
 				
@@ -107,9 +107,18 @@ public class ReactProcessUtil {
 				
 			}
 			
-			if ('{' == methodContent.charAt(0)) {
+			if (methodContent.length() > 0 && '{' == methodContent.charAt(0)) {
 				
 				endIndex = TxtContentUtil.getTagEndIndex(methodContent, '{', '}') + 1;
+				
+				methodBody = methodContent.substring(0, endIndex);
+				
+				methodContent = methodContent.substring(endIndex, methodContent.length());
+			}
+			
+			if (methodContent.length() > 0 && '[' == methodContent.charAt(0)) {
+				
+				endIndex = TxtContentUtil.getTagEndIndex(methodContent, '[', ']') + 1;
 				
 				methodBody = methodContent.substring(0, endIndex);
 				
@@ -133,10 +142,14 @@ public class ReactProcessUtil {
 			
 			methodResultMap.put(methodName, methodMap);
 			
-			// 第一个如果是封号
-			if (methodContent.indexOf(';') == 0) methodContent = methodContent.substring(1, methodContent.length()).trim();
+			if (!"".equals(methodContent.trim())) {
+				
+				// 第一个如果是封号
+				if (methodContent.indexOf(';') == 0) methodContent = methodContent.substring(1, methodContent.length()).trim();
+				
+				getMethodResultMap(methodContent, "", methodResultMap);
+			}
 			
-			getMethodResultMap(methodContent, "", methodResultMap);
 		}
 		
 	}
@@ -1322,6 +1335,35 @@ public class ReactProcessUtil {
 		}
 		
 		return sourceText;
+	}
+	
+	/**
+	 * 得到class 的包装类
+	 * 
+	 * @param sourceText
+	 * @return String
+	 */
+	public static String getClassPackageInfo(String sourceText, String className) {
+		
+		String tempText = "";
+		String packageName = "";
+		
+		if (sourceText.indexOf(className) > -1) {
+			
+			tempText = sourceText.substring(0, sourceText.indexOf(className)).trim();
+			
+			if ('(' == tempText.charAt(tempText.length() - 1)) {
+				
+				packageName = tempText.substring(tempText.lastIndexOf(' '), tempText.length() - 1);
+			} else {
+				
+				tempText = sourceText.substring(sourceText.indexOf(className) + className.length(), sourceText.length());
+				
+				return getClassPackageInfo(tempText, className);
+			}
+		}
+		
+		return packageName;
 	}
 	
 	/**
