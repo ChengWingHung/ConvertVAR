@@ -1137,6 +1137,9 @@ public class ReactProcessUtil {
 		
 		methodContent = preReplaceThisOfReactClass(methodContent, "setState", tempText);
 		
+		// fcSetState => fcSetState({...fcState,xxx
+		methodContent = addFcStateIntoSetStateProcess(methodContent, tempText);
+		
 		// 4. this.props => props
 		methodContent = preReplaceThisOfReactClass(methodContent, "props", "props");
 		
@@ -1151,6 +1154,32 @@ public class ReactProcessUtil {
 		sourceText = TxtContentUtil.replaceThisOfFrameWorkContent(sourceText, thisKeyWord, KeyWord, "", wordType);
 		
 		return sourceText;
+	}
+	
+	private static String addFcStateIntoSetStateProcess(String methodContent, String fcSetState) {
+		
+		if (methodContent.indexOf(fcSetState) < 0) return methodContent;
+		
+		String tempTxt = "";
+		
+		int endIndex = methodContent.indexOf(fcSetState) + fcSetState.length();
+		
+		tempTxt = methodContent.substring(endIndex, methodContent.length());
+		
+		if ('(' == tempTxt.trim().charAt(0)) {
+			
+			tempTxt = tempTxt.substring(tempTxt.indexOf('(') + 1, tempTxt.length());
+			
+			if ('{' == tempTxt.trim().charAt(0)) {
+				
+				return methodContent.substring(0, endIndex) + "({..." + classDataMap.get("fcState") + ", " + addFcStateIntoSetStateProcess(tempTxt.substring(tempTxt.indexOf('{') + 1, tempTxt.length()), fcSetState);
+			} else {
+				
+				return methodContent.substring(0, endIndex) + "(..." + classDataMap.get("fcState") + ", " + addFcStateIntoSetStateProcess(tempTxt, fcSetState);
+			}
+		}
+		
+		return methodContent.substring(0, endIndex) + addFcStateIntoSetStateProcess(tempTxt, fcSetState);
 	}
 	
 	/**
