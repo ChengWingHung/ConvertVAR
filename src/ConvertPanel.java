@@ -385,33 +385,35 @@ public class ConvertPanel extends JFrame {
 			outPutFilePath = outPutFileDir + resultFileName;
 		}
 		
-		if (processFileTypeIndex == 1) {
-    		
-    		// vue2 => vue3
-    		parseResultFileContent = Vue2ToVue3Process.parseVue2FileContent(resultFileName, relativeFilePath, fileContentValue);
-    	} else if (processFileTypeIndex == 2) {
-    		
-    		// react class => function
-    		parseResultFileContent = ReactClassToFuncProcess.parseReactFileContent(resultFileName, fileContentValue);
-    	} else if (processFileTypeIndex == 3) {
-    		
-    		// vue2 => react function 预留
-    		parseResultFileContent = Vue2ToReactFuncProcess.parseVue2FileContent(resultFileName, fileContentValue);
-    	} else if (processFileTypeIndex == 4) {
-    		
-    		// react class => vue3 预留
-    		parseResultFileContent = ReactClassToVue3Process.parseReactFileContent(resultFileName, fileContentValue);
-    	}
-		
 		try {
+			
+			if (processFileTypeIndex == 1) {
+	    		
+	    		// vue2 => vue3
+	    		parseResultFileContent = Vue2ToVue3Process.parseVue2FileContent(resultFileName, relativeFilePath, fileContentValue);
+	    	} else if (processFileTypeIndex == 2) {
+	    		
+	    		// react class => function
+	    		parseResultFileContent = ReactClassToFuncProcess.parseReactFileContent(resultFileName, fileContentValue);
+	    	} else if (processFileTypeIndex == 3) {
+	    		
+	    		// vue2 => react function 预留
+	    		parseResultFileContent = Vue2ToReactFuncProcess.parseVue2FileContent(resultFileName, fileContentValue);
+	    	} else if (processFileTypeIndex == 4) {
+	    		
+	    		// react class => vue3 预留
+	    		parseResultFileContent = ReactClassToVue3Process.parseReactFileContent(resultFileName, fileContentValue);
+	    	}
 			
         	FileOperationUtil.createResultFile(outPutFileDir, outPutFilePath);// 创建生成的文件
         	
     		FileOperationUtil.writeContentIntoFile(outPutFilePath, parseResultFileContent, false);//写入文件
         	
-        } catch(IOException err) {
+        } catch(Exception err) {
 			
-        	ConvertLogUtil.printConvertLog("error", "创建文件失败:" + resultFilePath);
+        	errorFileList.add(currentFilePath);
+        	
+        	ConvertLogUtil.printConvertLog("error", "创建文件失败:" + resultFilePath + "\n异常原因:" + err.getMessage());
 		}
     	
     	processFileIndex++;

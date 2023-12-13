@@ -57,7 +57,7 @@ public class Vue2ToVue3Process {
 	
 	private static int count = 0;// 计数器
 	
-	public static String parseVue2FileContent(String fileName, String relativeFilePath, String parseResultContent) {
+	public static String parseVue2FileContent(String fileName, String relativeFilePath, String parseResultContent) throws Exception {
 		
 		// 先判断文件是否为vue3 版本，是的话则不继续处理
 		if (VueProcessUtil.isVue3FileContent(parseResultContent)) return parseResultContent;

@@ -32,7 +32,7 @@ public class ReactClassToFuncProcess {
 		
 	}
 	
-	public static String parseReactFileContent(String fileName, String parseResultContent) {
+	public static String parseReactFileContent(String fileName, String parseResultContent) throws Exception {
 		
 		// 判断是不是class 类组件
 		if (!ReactProcessUtil.isReactClassFileContent(parseResultContent)) return parseResultContent;
