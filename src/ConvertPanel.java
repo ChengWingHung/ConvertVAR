@@ -32,7 +32,7 @@ public class ConvertPanel extends JFrame {
 	 * 前端框架vue和react版本升级处理工具
 	 * 
 	 * @author 郑荣鸿（ChengWingHung）
-	 * @date 20231010 21:00:00 - 20231123 19:45:00
+	 * @date 20231010 21:00:00 - 20231213 22:30:00
 	 * @description 前端框架转换工具
 	 * @version 1.0.0
 	 * 
@@ -115,7 +115,9 @@ public class ConvertPanel extends JFrame {
             public void mouseClicked(MouseEvent e) {
 
             	JFileChooser jfc = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+            	
             	jfc.setDialogTitle("请选择输出文件路径");
+            	
                 jfc.setAcceptAllFileFilterUsed(false);
                 
                 jfc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -164,10 +166,13 @@ public class ConvertPanel extends JFrame {
             	fileTypeIndex = fileTypeBox.getSelectedIndex();
             	
             	JFileChooser jfc = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
-            	jfc.setDialogTitle("选择"+(fileTypeIndex == 0?"文件":"文件夹"));
+            	
+            	jfc.setDialogTitle("选择" + (fileTypeIndex == 0?"文件":"文件夹"));
+            	
                 jfc.setAcceptAllFileFilterUsed(false);
                 
                 if (fileTypeIndex == 1) {
+                	
                 	jfc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
                 }
                 
@@ -178,16 +183,25 @@ public class ConvertPanel extends JFrame {
                 	errorFileList = new ArrayList<String>();
                 	
                 	if (fileTypeIndex == 1) {
+                		
                 		if (jfc.getSelectedFile().isDirectory()) {
+                			
                 			hasSelectedFileFlg = true;
+                			
                 			fileList = FileOperationUtil.getProcessFileList(jfc.getSelectedFile());
+                			
                 			selectedFileDir = jfc.getSelectedFile().toString() + "/";
+                			
                 			selectedFilePathValueLabel.setText("已选择文件夹！");
                         }
                 	} else {
+                		
                 		hasSelectedFileFlg = true;
+                		
                 		fileList = new ArrayList<String>();
+                		
                 		fileList.add(jfc.getSelectedFile().getPath().toString());
+                		
                 		selectedFilePathValueLabel.setText("已选择文件！");
                 	}
                     
@@ -219,8 +233,10 @@ public class ConvertPanel extends JFrame {
                 copyFileList = new ArrayList<String>();
                 
                 if (typeSelectBox.getSelectedIndex() == 1 || typeSelectBox.getSelectedIndex() == 3) {
+                	
                 	processFileType = ".js,.vue";
                 } else if (typeSelectBox.getSelectedIndex() == 2 || typeSelectBox.getSelectedIndex() == 4) {
+                	
                 	processFileType = ".js,.jsx";
                 }
                 
@@ -230,8 +246,10 @@ public class ConvertPanel extends JFrame {
                 	
                 	// 后缀为js/vue/jsx的需要处理
                 	if (showResult.lastIndexOf('.') > -1 && processFileType.indexOf(showResult.substring(showResult.lastIndexOf('.'), showResult.length())) > -1) {
+                		
                 		processFileList.add(showResult);
                 	} else {
+                		
                 		copyFileList.add(showResult);
                 	}
                 	
@@ -353,11 +371,16 @@ public class ConvertPanel extends JFrame {
 		String parseResultFileContent = "";
     	
     	try {
+    		
     		fileContentValue = FileOperationUtil.readFileUsingInputStream(new File(processFileList.get(fileIndex).toString()));
     	} catch(IOException err) {
+    		
     		showProcessContent("文件读取异常：" + currentFilePath, 0);
+    		
     		errorFileList.add(currentFilePath);
+    		
     		processFileIndex++;
+    		
     		readFileContentAndParse(processFileIndex);
     		return;
     	}
@@ -413,13 +436,12 @@ public class ConvertPanel extends JFrame {
 			
         	errorFileList.add(currentFilePath);
         	
-        	ConvertLogUtil.printConvertLog("error", "创建文件失败:" + resultFilePath + "\n异常原因:" + err.getMessage());
+        	ConvertLogUtil.printConvertLog("error", "解析或创建文件失败:" + resultFilePath + "\n失败原因:" + err.getMessage());
 		}
     	
     	processFileIndex++;
+    	
 		readFileContentAndParse(processFileIndex);
-		
-		// 后续改为多线程解析文件，提高解析速度
 		
 	}
 	
@@ -438,14 +460,18 @@ public class ConvertPanel extends JFrame {
 			String temp = "";
 			
 			if (showResult.length() > subLength) {
+				
 	    		temp = showResult;
+	    		
 	    		showResult = "<html><body>";
 	    		
 	    		for (int j=0;j<temp.length();) {
 	    			
 	    			if (j+subLength < temp.length()) {
+	    				
 	    				showResult += temp.substring(j, j+subLength) + "<br/>";
 	    			} else {
+	    				
 	    				showResult += temp.substring(j, temp.length());
 	    			}
 	    			
